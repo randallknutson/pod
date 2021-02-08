@@ -69,28 +69,36 @@ func serve(adapterID string) error {
 	cmdCharacteristic.Properties.Flags = []string{
 		gatt.FlagCharacteristicRead,
 		gatt.FlagCharacteristicWrite,
+		gatt.FlagCharacteristicIndicate,
+		//	gatt.FlagCharacteristicNotify,
 	}
-
-	cmdCharacteristic.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("cmd READ request 1")
-		return []byte{42}, nil
-	}))
-
-	cmdCharacteristic.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
-		log.Warnf("cmd WRITE %x", value)
-		if value[0] == 0x00 {
-			cmdCharacteristic.Confirm()
-			err = cmdCharacteristic.WriteValue([]byte{1, 0}, nil)
-			fmt.Println("err")
-		}
-
-		return value, nil
-	}))
 
 	cmdDescriptor, err := cmdCharacteristic.NewDescr("2902")
 	if err != nil {
 		return err
 	}
+
+	cmdCharacteristic.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
+		log.Infof("cmd READ request 1")
+		return []byte{42}, nil
+	}))
+
+	cmdCharacteristic.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
+		log.Infof("cmd WRITE %x %x", value, value[0])
+		if value[0] == 0x00 { // flow control, the PDM wants to write
+			cmdCharacteristic.Confirm()
+
+			w := cmdDescriptor.WriteValue([]byte{1}, nil) // send a RTS
+			if w != nil {
+				fmt.Println("Error ", w)
+				log.Warnf("write err %v", w)
+			}
+
+			return []byte{1, 0}, nil
+		}
+
+		return value, nil
+	}))
 
 	cmdDescriptor.Properties.Flags = []string{
 		gatt.FlagDescriptorRead,
@@ -98,12 +106,12 @@ func serve(adapterID string) error {
 	}
 
 	cmdDescriptor.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("cmd DESC READ %+v", options)
+		log.Infof("cmd DESC READ %+v", options)
 		return []byte{42}, nil
 	}))
 
 	cmdDescriptor.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
-		log.Warnf("cmd DESC WRITE %x", value)
+		log.Infof("cmd DESC WRITE %x", value)
 
 		return value, nil
 	}))
@@ -125,6 +133,7 @@ func serve(adapterID string) error {
 	dataCharacteristic.Properties.Flags = []string{
 		gatt.FlagCharacteristicRead,
 		gatt.FlagCharacteristicWrite,
+		gatt.FlagCharacteristicIndicate,
 	}
 
 	dataCharacteristic.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
@@ -148,12 +157,12 @@ func serve(adapterID string) error {
 	}
 
 	dataDescriptor.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("data desc READ %+v", options)
+		log.Infof("data desc READ %+v", options)
 		return []byte{42}, nil
 	}))
 
 	dataDescriptor.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
-		log.Warnf("data desc WRITE %x", value)
+		log.Infof("data desc WRITE %x", value)
 		return value, nil
 	}))
 
