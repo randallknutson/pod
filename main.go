@@ -143,7 +143,6 @@ func serve(adapterID string) error {
 
 	dataCharacteristic.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
 		log.Warnf("data WRITE REQUEST %x", value)
-		dataCharacteristic.Confirm()
 		return value, nil
 	}))
 
