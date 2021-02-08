@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/muka/go-bluetooth/api/service"
@@ -60,101 +61,108 @@ func serve(adapterID string) error {
 		return err
 	}
 
-	char1, err := service1.NewChar("2441")
+	cmdCharacteristic, err := service1.NewChar("2441")
 	if err != nil {
 		return err
 	}
 
-	char1.Properties.Flags = []string{
+	cmdCharacteristic.Properties.Flags = []string{
 		gatt.FlagCharacteristicRead,
 		gatt.FlagCharacteristicWrite,
 	}
 
-	char1.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("GOT CHAR READ REQUEST 1")
+	cmdCharacteristic.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
+		log.Warnf("cmd READ request 1")
 		return []byte{42}, nil
 	}))
 
-	char1.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
-		log.Warnf("GOT CHAR WRITE REQUEST 1 %x", value)
+	cmdCharacteristic.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
+		log.Warnf("cmd WRITE %x", value)
+		if value[0] == 0x00 {
+			cmdCharacteristic.Confirm()
+			err = cmdCharacteristic.WriteValue([]byte{1, 0}, nil)
+			fmt.Println("err")
+		}
+
 		return value, nil
 	}))
 
-	descr1, err := char1.NewDescr("2902")
+	cmdDescriptor, err := cmdCharacteristic.NewDescr("2902")
 	if err != nil {
 		return err
 	}
 
-	descr1.Properties.Flags = []string{
+	cmdDescriptor.Properties.Flags = []string{
 		gatt.FlagDescriptorRead,
 		gatt.FlagDescriptorWrite,
 	}
 
-	descr1.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("GOT DESC READ REQUEST 1 %+v", options)
+	cmdDescriptor.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
+		log.Warnf("cmd DESC READ %+v", options)
 		return []byte{42}, nil
 	}))
 
-	descr1.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
-		log.Warnf("GOT DESC WRITE REQUEST 2 %x", value)
+	cmdDescriptor.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
+		log.Warnf("cmd DESC WRITE %x", value)
+
 		return value, nil
 	}))
-
-	err = char1.AddDescr(descr1)
+	err = cmdCharacteristic.AddDescr(cmdDescriptor)
 	if err != nil {
 		return err
 	}
 
-	err = service1.AddChar(char1)
+	err = service1.AddChar(cmdCharacteristic)
 	if err != nil {
 		return err
 	}
 
-	char2, err := service1.NewChar("2442")
+	dataCharacteristic, err := service1.NewChar("2442")
 	if err != nil {
 		return err
 	}
 
-	char2.Properties.Flags = []string{
+	dataCharacteristic.Properties.Flags = []string{
 		gatt.FlagCharacteristicRead,
 		gatt.FlagCharacteristicWrite,
 	}
 
-	char2.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("GOT char READ REQUEST 2")
+	dataCharacteristic.OnRead(service.CharReadCallback(func(c *service.Char, options map[string]interface{}) ([]byte, error) {
+		log.Warnf("data READ REQUEST ")
 		return []byte{42}, nil
 	}))
 
-	char2.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
-		log.Warnf("GOT char WRITE REQUEST 2")
+	dataCharacteristic.OnWrite(service.CharWriteCallback(func(c *service.Char, value []byte) ([]byte, error) {
+		log.Warnf("data WRITE REQUEST %x", value)
 		return value, nil
 	}))
 
-	descr2, err := char2.NewDescr("2902")
+	dataDescriptor, err := dataCharacteristic.NewDescr("2902")
 	if err != nil {
 		return err
 	}
 
-	descr2.Properties.Flags = []string{
+	dataDescriptor.Properties.Flags = []string{
 		gatt.FlagDescriptorRead,
 		gatt.FlagDescriptorWrite,
 	}
 
-	descr2.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
-		log.Warnf("GOT desc READ REQUEST 1 %+v", options)
+	dataDescriptor.OnRead(service.DescrReadCallback(func(c *service.Descr, options map[string]interface{}) ([]byte, error) {
+		log.Warnf("data desc READ %+v", options)
 		return []byte{42}, nil
 	}))
 
-	descr2.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
-		log.Warnf("GOT desc WRITE REQUEST 2 %x", value)
+	dataDescriptor.OnWrite(service.DescrWriteCallback(func(d *service.Descr, value []byte) ([]byte, error) {
+		log.Warnf("data desc WRITE %x", value)
 		return value, nil
 	}))
 
-	err = char2.AddDescr(descr2)
+	err = dataCharacteristic.AddDescr(dataDescriptor)
 	if err != nil {
 		return err
 	}
-	err = service1.AddChar(char2)
+
+	err = service1.AddChar(dataCharacteristic)
 	if err != nil {
 		return err
 	}
@@ -208,7 +216,7 @@ func serve(adapterID string) error {
 }
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.TraceLevel)
 	adapterID := "hci0"
 	btInit(adapterID)
 	serve(adapterID)
