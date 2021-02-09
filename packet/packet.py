@@ -65,7 +65,7 @@ class Ble():
             self.eap = None
             if eap:
                 self.eap = Eap(bin=self.data)
-    
+
     def __str__(self):
         ret = f"""
             Preamble: {self.preamble}
@@ -85,7 +85,7 @@ class Attribute():
         self.type_bin = type
         self.type = ATTRIBUTE_TYPE.get(self.type_bin, "not documented")
         self.data= data
-    
+
     def __str__(self):
         return f"""
                 Type: {self.type} :: {self.type_bin}
@@ -99,12 +99,12 @@ class Res(Attribute):
         self.type = ATTRIBUTE_TYPE.get(self.type_bin, "not documented")
         self.length = (data[0]*16+data[1])/8
         self.data= data[2:]
-    
+
     def __str__(self):
         return f"""
                 Type: {self.type} :: {self.type_bin}
                 Data: {self.data}
-                Length: {self.length} 
+                Length: {self.length}
                 Hex: {','.join(list(map(to_hex, self.data)))}
         """
 
@@ -122,7 +122,7 @@ class Eap():
         if not bin:
             hex = input.split(',')
             bin = list(map(lambda x: int(x, 16), hex))
-        
+
         self.length = bin[2]*16+bin[3]
         self.code_bin = bin[0]
         self.code = CODE_BIN[self.code_bin]
@@ -139,7 +139,7 @@ class Eap():
             attribute_type = tail[0]
             length = tail[1] * 4 # multiple of 4 bytes
             attribute_data = tail[2:length]
-            
+
             if attribute_type in [1,2]: # remove 2 reserved bytes
                 assert(attribute_data[0] == 0)
                 assert(attribute_data[1] == 0)
@@ -149,10 +149,10 @@ class Eap():
             attribute = Attribute(attribute_type, attribute_data)
             if attribute_type in DECODED_ATTRIBUTES:
                 attribute = DECODED_ATTRIBUTES[attribute_type](attribute_data)
-          
+
 
             self.attributes.append(attribute)
-            tail = tail[length:] 
+            tail = tail[length:]
 
     def __str__(self):
         ret =  f"""
@@ -172,7 +172,7 @@ class Eap():
 
 
 def to_hex(a):
-    return "{0:02x}".format(a) 
+    return "{0:02x}".format(a)
 
 class PodCommand():
     def __init__(self, cmd):
@@ -195,7 +195,7 @@ def decrypt(ck, nonce, data, expected):
     bin_nonce = bytes.fromhex(nonce)
     bin_ck = bytes.fromhex(ck)
     bin_data = bytes.fromhex(data)
-    
+
     print("Nonce", bin_nonce, len(bin_nonce))
     print("Ck", bin_ck, len(bin_ck))
     print("Data", bin_data, len(bin_data))
@@ -206,13 +206,13 @@ def decrypt(ck, nonce, data, expected):
 
     print("Decrypted: ", decrypted.hex(','), len(decrypted))
     print("Expected:  ", expected, len(expected.replace(',',''))/2)
-        
+
 def decrypt(ck, nonce, data, expected):
     print(f"Descrypt: CK: {ck}, Nonce: {nonce}, Data:{data}")
     bin_nonce = bytes.fromhex(nonce)
     bin_ck = bytes.fromhex(ck)
     bin_data = bytes.fromhex(data)
-    
+
     print("Nonce", bin_nonce, len(bin_nonce))
     print("Ck", bin_ck, len(bin_ck))
     print("Data", bin_data, len(bin_data))
@@ -229,7 +229,7 @@ def encrypt(ck, nonce, data, expected):
     bin_nonce = bytes.fromhex(nonce)
     bin_ck = bytes.fromhex(ck)
     bin_data = bytes.fromhex(data)
-    
+
     print("Nonce", bin_nonce, len(bin_nonce))
     print("Ck", bin_ck, len(bin_ck))
     print("Data", bin_data, len(bin_data))
@@ -257,16 +257,16 @@ def milenage(ltk, rand, seq, ck, want_res, autn):
     print("Amf: ", bin_amf.hex(), len(bin_amf))
     #0xf6203e12d502c2cd
     #0x18b32cc76a676d2b
-    
+
     op = 'f6203e12d502c2cd18b32cc76a676d2b'
     #op = '18b32cc76a676d2bf6203e12d502c2cd'
     op = 'cdc202d5123e20f62b6d676ac72cb318'
-    bin_op = bytes.fromhex(op) 
+    bin_op = bytes.fromhex(op)
     print("Op: ", bin_op.hex(","), len(bin_op))
 
-    m = Milenage(bin_op)    
+    m = Milenage(bin_op)
     res, res_ck, ik, ak = m.f2345(bin_ltk, bin_rand)
-    
+
     print("CK is: ", bin_ck.hex(","), len(bin_ck))
     print("Received CK is: ", res_ck.hex(","), len(res_ck))
     print("Got  Res is: ", res.hex(","), len(res))
@@ -275,7 +275,7 @@ def milenage(ltk, rand, seq, ck, want_res, autn):
     print("IK is: ",ik.hex(","), len(ik))
     print("AK is: ", ak.hex(","), len(ak))
 
-  
+
 def _xor(a, b):
     ret = bytearray(16)
     for i in range(len(a)):
@@ -296,7 +296,7 @@ def _get_milenage(opc, k, rand, sqn, amf):
       _rand = bytearray.fromhex(rand)
       sqn = bytearray.fromhex(sqn)
       amf = bytearray.fromhex(amf)
-      
+
       aes1 = AES.new(bytes(k), AES.MODE_ECB)
       tmp1 = _xor(_rand, opc)
       tmp1 = aes1.encrypt(bytes(tmp1))
@@ -331,10 +331,10 @@ def _get_milenage(opc, k, rand, sqn, amf):
       tmp3 = aes4.encrypt(bytes(tmp1))
       tmp3 = bytearray(tmp3)
       tmp3 = _xor(tmp3, opc)
-      
+
       res = _bytetostring(tmp3[8:16])
       ak = _bytetostring(tmp3[0:6])
-      
+
       for i in range(len(tmp1)):
           tmp1[(i + 12) % 16] = tmp2[i] ^ opc[i]
       tmp1[15] ^= 1 << 1
@@ -343,9 +343,9 @@ def _get_milenage(opc, k, rand, sqn, amf):
       tmp1 = aes5.encrypt(bytes(tmp1))
       tmp1 = bytearray(tmp1)
       tmp1 = _xor(tmp1, opc)
-    
+
       ck = _bytetostring(tmp1)
-      
+
       for i in range(len(tmp1)):
           tmp1[(i + 8) % 16] = tmp2[i] ^ opc[i]
       tmp1[15] ^= 1 << 2
@@ -353,7 +353,7 @@ def _get_milenage(opc, k, rand, sqn, amf):
       tmp1 = aes6.encrypt(bytes(tmp1))
       tmp1 = bytearray(tmp1)
       tmp1 = _xor(tmp1, opc)
-      
+
       ik = _bytetostring(tmp1)
 
       tmp1 = bytearray.fromhex(ak)
@@ -372,8 +372,8 @@ def _get_milenage(opc, k, rand, sqn, amf):
 def _bytetostring(b):
     return ''.join(format(x, '02x') for x in b)
 
-if __name__=="__main__":    
-    # 
+if __name__=="__main__":
+    #
     # 2020-03-04 19:37:04.014  1342  2618 D PairingMasterModule LTK: c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd,
     # 2020-03-04 19:37:04.086  1342  2618 I ConnectionManager **************** MY ID IS *********************08,20,2e,a8,
     # 2020-03-04 19:37:04.087  1342  2618 D EapAkaMasterModule Eap aka start session sequence 00,00,00,00,00,01,
@@ -412,8 +412,8 @@ if __name__=="__main__":
     # 2020-03-04 19:37:04.709  1342  1401 I TwiBleManager bytes going on ble 54,57,11,01,07,00,03,40,08,20,2e,a8,08,20,2e,a9,ab,35,d8,31,60,9b,b8,fe,3a,3b,de,5b,18,37,24,9a,16,db,f8,e4,d3,05,e9,75,dc,81,7c,37,07,cc,41,5f,af,8a,
     print(Ble("54,57,11,01,07,00,03,40,08,20,2e,a8,08,20,2e,a9,ab,35,d8,31,60,9b,b8,fe,3a,3b,de,5b,18,37,24,9a,16,db,f8,e4,d3,05,e9,75,dc,81,7c,37,07,cc,41,5f,af,8a"))
     print(PodCommand("FFFFFFFF2C060704FFFFFFFF817A"))
-     
-  
+
+
     # 2020-03-04 19:37:05.044  1342  1401 I TwiBleManager bytes received on ble 54,57,11,a1,05,08,04,a0,08,20,2e,a9,08,20,2e,a8,6d,fd,d5,e9,26,6d,54,9e,82,0e,a9,a2,68,0c,8a,88,18,0f,d3,df,34,2a,13,e8,8e,cd,3a,db,4f,a0,95,eb,0a,ed,c1,e0,e8,b6,c9,48,07,8e,d0,c9,72,
     # 2020-03-04 19:37:05.044  1342  1401 I CentralClient  notifyReadCompleted 0
     # 2020-03-04 19:37:05.045  1342  1401 D EnDecryptionModule Decrypt NONCE is 6c,ff,5d,18,b7,61,6c,ae,80,00,00,00,02,
