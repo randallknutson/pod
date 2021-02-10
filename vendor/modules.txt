@@ -1,0 +1,25 @@
+# github.com/konsorten/go-windows-terminal-sequences v1.0.3
+github.com/konsorten/go-windows-terminal-sequences
+# github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
+## explicit
+# github.com/paypal/gatt v0.0.0-20151011220935-4ae819d591cf
+## explicit
+github.com/paypal/gatt
+github.com/paypal/gatt/linux
+github.com/paypal/gatt/linux/cmd
+github.com/paypal/gatt/linux/evt
+github.com/paypal/gatt/linux/gioctl
+github.com/paypal/gatt/linux/socket
+github.com/paypal/gatt/linux/util
+github.com/paypal/gatt/xpc
+# github.com/sirupsen/logrus v1.6.0
+## explicit
+github.com/sirupsen/logrus
+# github.com/stretchr/testify v1.6.1
+## explicit
+# golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1
+## explicit
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+# gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
+## explicit
