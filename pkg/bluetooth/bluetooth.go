@@ -168,6 +168,13 @@ func (b *Ble) WriteData(packet Packet) error {
 	return nil
 }
 
+func (b *Ble) writeDataBuffer(buf *bytes.Buffer) error {
+	data := make([]byte, buf.Len())
+	copy(data, buf.Bytes())
+	buf.Reset()
+	return b.WriteData(data)
+}
+
 func (b *Ble) ReadCmd() (Packet, error) {
 	packet := <-b.cmdInput
 	return packet, nil
@@ -218,12 +225,79 @@ func (b *Ble) expectCommand(expected Packet) {
 }
 
 func (b *Ble) writeMessage(msg *Message) {
+	var buf bytes.Buffer
+	var index byte = 0
 
 	b.WriteCmd(CmdRTS)
-	b.expectCommand(CmdCTS)
+	b.expectCommand(CmdCTS) // TODO figure out what to do if !CTS
+	bytes := msg.toByteArray()
+	sum := crc32.ChecksumIEEE(bytes)
+	if len(bytes) <= 18 {
+		buf.WriteByte(index) // index
+		buf.WriteByte(0)     // fragments
 
-	// serialize the thing
-	// and split it in packets
+		buf.WriteByte(byte(sum >> 24))
+		buf.WriteByte(byte(sum >> 16))
+		buf.WriteByte(byte(sum >> 8))
+		buf.WriteByte(byte(sum))
+		buf.WriteByte((byte(len(bytes))))
+		end := len(bytes)
+		if len(bytes) > 14 {
+			end = 14
+		}
+		buf.Write(bytes[:end])
+		b.writeDataBuffer(&buf)
+
+		if len(bytes) > 14 {
+			buf.WriteByte(index)
+			buf.WriteByte(byte(len(bytes) - 14))
+			buf.Write(bytes[14:])
+			b.writeDataBuffer(&buf)
+		}
+		return
+	}
+
+	size := len(bytes)
+	fullFragments := (byte)((size - 18) / 19)
+	rest := (byte)((size - (int(fullFragments) * 19)) - 18)
+	buf.WriteByte(index)
+	buf.WriteByte(fullFragments + 1)
+	buf.Write(bytes[:18])
+
+	b.writeDataBuffer(&buf)
+
+	for index = 1; index <= fullFragments; index++ {
+		buf.WriteByte(index)
+		if index == 1 {
+			buf.Write(bytes[18:37])
+		} else {
+			buf.Write(bytes[(index-1)*19+18 : (index-1)*19+18+19])
+		}
+		b.writeDataBuffer(&buf)
+	}
+
+	buf.WriteByte(index)
+	buf.WriteByte(rest)
+	buf.WriteByte(byte(sum >> 24))
+	buf.WriteByte(byte(sum >> 16))
+	buf.WriteByte(byte(sum >> 8))
+	buf.WriteByte(byte(sum))
+	end := rest
+	if rest > 14 {
+		end = 14
+	}
+	buf.Write(bytes[(fullFragments*19)+18 : (fullFragments*19)+18+end])
+	b.writeDataBuffer(&buf)
+	if rest > 14 {
+		index++
+		buf.WriteByte(index)
+		buf.WriteByte(rest - 14)
+		buf.Write(bytes[fullFragments*19+18+14:])
+		for buf.Len() < 20 {
+			buf.WriteByte(0)
+		}
+		b.writeDataBuffer(&buf)
+	}
 	b.expectCommand(CmdSuccess)
 }
 
@@ -274,7 +348,7 @@ func (b *Ble) readMessage(cmd Packet) (*Message, error) {
 		checksum = data[2:6]
 		buf.Write(data[6 : len+6])
 	}
-	log.Debugf("One extra: %b", oneExtra)
+	log.Debugf("One extra: %t", oneExtra)
 	if oneExtra {
 		data, _ := b.ReadData()
 		buf.Write(data[2 : data[1]+2])

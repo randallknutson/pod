@@ -6,7 +6,7 @@ type Message struct {
 }
 
 func (m *Message) toByteArray() []byte {
-	return nil
+	return m.Data
 }
 
 func fromByteArray(data []byte) (*Message, error) {

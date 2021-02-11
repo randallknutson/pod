@@ -38,6 +38,12 @@ func (p *Pod) StartActivation() {
 	// let's send back what we received, wrong for now
 	p.ble.WriteMessage(msg)
 
+	msg, _ = p.ble.ReadMessage()
+	log.Infof("Received message 3: %s", msg)
+
+	// let's send back what we received, wrong for now
+	p.ble.WriteMessage(msg)
+
 	// what we want to see in logs:
 	//  EapAkaMasterModule Reached Eap-Aka SUCCESSFULLY
 }
