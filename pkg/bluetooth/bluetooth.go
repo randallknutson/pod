@@ -274,7 +274,7 @@ func (b *Ble) readMessage(cmd Packet) (*Message, error) {
 		checksum = data[2:6]
 		buf.Write(data[6 : len+6])
 	}
-	log.Infof("One extra: %b", oneExtra)
+	log.Debugf("One extra: %b", oneExtra)
 	if oneExtra {
 		data, _ := b.ReadData()
 		buf.Write(data[2 : data[1]+2])
