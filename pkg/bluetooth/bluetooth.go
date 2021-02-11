@@ -1,49 +1,37 @@
 package bluetooth
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"hash/crc32"
 
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
 )
 
-type PacketType int
-
-type Packet struct {
-	Type PacketType
-	Data []byte
-}
-
-const (
-	PacketTypeCmd PacketType = iota
-	PacketTypeData
-)
+type Packet []byte
 
 var (
-	CmdRTS Packet = Packet{
-		Type: PacketTypeCmd,
-		Data: []byte{0},
-	}
-	CmdCTS Packet = Packet{
-		Type: PacketTypeCmd,
-		Data: []byte{1},
-	}
-	CmdNACK Packet = Packet{
-		Type: PacketTypeCmd,
-		Data: []byte{2},
-	}
-	CmdSuccess Packet = Packet{
-		Type: PacketTypeCmd,
-		Data: []byte{4},
-	}
+	CmdRTS     = Packet([]byte{0})
+	CmdCTS     = Packet([]byte{1})
+	CmdNACK    = Packet([]byte{2, 0})
+	CmdAbort   = Packet([]byte{3})
+	CmdSuccess = Packet([]byte{4})
+	CmdFail    = Packet([]byte{5})
 )
 
 type Ble struct {
-	input      chan Packet
+	dataInput  chan Packet
+	cmdInput   chan Packet
 	dataOutput chan Packet
 	cmdOutput  chan Packet
+
+	messageInput  chan *Message
+	messageOutput chan *Message
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -58,9 +46,12 @@ var DefaultServerOptions = []gatt.Option{
 
 func New(adapterID string) (*Ble, error) {
 	b := &Ble{
-		input:      make(chan Packet, 5),
-		dataOutput: make(chan Packet, 5),
-		cmdOutput:  make(chan Packet, 5),
+		dataInput:     make(chan Packet, 5),
+		cmdInput:      make(chan Packet, 5),
+		dataOutput:    make(chan Packet, 5),
+		cmdOutput:     make(chan Packet, 5),
+		messageInput:  make(chan *Message, 5),
+		messageOutput: make(chan *Message, 2),
 	}
 
 	d, err := gatt.NewDevice(DefaultServerOptions...)
@@ -88,10 +79,9 @@ func New(adapterID string) (*Ble, error) {
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
 					log.Debugf("Received CMD:  %x", data)
-					b.input <- Packet{
-						Type: PacketTypeCmd,
-						Data: data,
-					}
+					ret := make([]byte, len(data))
+					copy(ret, data)
+					b.cmdInput <- Packet(ret)
 					return 0
 				})
 
@@ -104,8 +94,8 @@ func New(adapterID string) (*Ble, error) {
 								log.Fatalf("CMD closed")
 							}
 							packet := <-b.cmdOutput
-							ret, err := n.Write(packet.Data)
-							log.Debugf("CMD notification return: %d", ret)
+							ret, err := n.Write(packet)
+							log.Debugf("CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
 								log.Fatalf("Error writing CMD: %s", err)
 							}
@@ -123,10 +113,10 @@ func New(adapterID string) (*Ble, error) {
 								log.Fatalf("DATA closed")
 							}
 							packet := <-b.dataOutput
-							ret, err := n.Write(packet.Data)
-							log.Info("DATA notification return: %d", ret)
+							ret, err := n.Write(packet)
+							log.Debugf("DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
-								log.Fatalf("Error writing DATA: %s", err)
+								log.Fatalf("Error writing DATA: %s ", err)
 							}
 						}
 					}()
@@ -135,10 +125,9 @@ func New(adapterID string) (*Ble, error) {
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
 					log.Debugf("Received DATA %x", data)
-					b.input <- Packet{
-						Type: PacketTypeData,
-						Data: data,
-					}
+					ret := make([]byte, len(data))
+					copy(ret, data)
+					b.dataInput <- Packet(ret)
 					return 0
 				})
 
@@ -159,7 +148,7 @@ func New(adapterID string) (*Ble, error) {
 		default:
 		}
 	}
-
+	go b.loop()
 	d.Init(onStateChanged)
 	return b, nil
 }
@@ -179,15 +168,128 @@ func (b *Ble) WriteData(packet Packet) error {
 	return nil
 }
 
-func (b *Ble) Read() (Packet, error) {
-	packet := <-b.input
+func (b *Ble) ReadCmd() (Packet, error) {
+	packet := <-b.cmdInput
+	return packet, nil
+}
+
+func (b *Ble) ReadData() (Packet, error) {
+	packet := <-b.dataInput
 	return packet, nil
 }
 
 func (p Packet) String() string {
-	t := "CMD"
-	if p.Type == PacketTypeData {
-		t = "DATA"
+	return hex.EncodeToString(p)
+}
+
+func (m Message) String() string {
+	return hex.EncodeToString(m.Data)
+}
+
+func (b *Ble) ReadMessage() (*Message, error) {
+	message := <-b.messageInput
+	return message, nil
+}
+
+func (b *Ble) WriteMessage(message *Message) {
+	b.messageOutput <- message
+}
+
+func (b *Ble) loop() {
+	for {
+		select {
+		case msg := <-b.messageOutput:
+			b.writeMessage(msg)
+		case cmd := <-b.cmdInput:
+			msg, err := b.readMessage(cmd)
+			if err != nil {
+				log.Fatalf("Error reading message: %s", err)
+			}
+			b.messageInput <- msg
+		}
 	}
-	return fmt.Sprintf("%s : %s", t, hex.EncodeToString(p.Data))
+}
+
+func (b *Ble) expectCommand(expected Packet) {
+	cmd, _ := b.ReadCmd()
+	if bytes.Compare(expected, cmd) != 0 {
+		log.Fatalf("Expected: %s. Received: %s", expected, cmd)
+	}
+}
+
+func (b *Ble) writeMessage(msg *Message) {
+
+	b.WriteCmd(CmdRTS)
+	b.expectCommand(CmdCTS)
+
+	// serialize the thing
+	// and split it in packets
+	b.expectCommand(CmdSuccess)
+}
+
+func (b *Ble) readMessage(cmd Packet) (*Message, error) {
+	var buf bytes.Buffer
+	var checksum []byte
+
+	if bytes.Compare(cmd, CmdRTS) != 0 {
+		log.Fatalf("Expected: %s. Received: %s", CmdRTS, cmd)
+	}
+	b.WriteCmd(CmdCTS)
+
+	first, _ := b.ReadData()
+	fragments := int(first[1])
+	expectedIndex := 1
+	oneExtra := false
+	if fragments == 0 {
+		checksum = first[2:6]
+		len := first[6]
+		end := len + 7
+		if len > 13 {
+			oneExtra = true
+			end = 20
+		}
+		buf.Write(first[7:end])
+	} else {
+		buf.Write(first[2:20])
+	}
+	for i := 1; i < fragments; i++ {
+		data, _ := b.ReadData()
+		if i == expectedIndex {
+			buf.Write(data[1:20])
+		} else {
+			log.Warnf("Sending NACK, packet index is wrong")
+			buf.Write(data[:])
+			CmdNACK[1] = byte(expectedIndex)
+			b.WriteCmd(CmdNACK)
+		}
+		expectedIndex++
+	}
+	if fragments != 0 {
+		data, _ := b.ReadData()
+		len := data[1]
+		if len > 14 {
+			oneExtra = true
+			len = 14
+		}
+		checksum = data[2:6]
+		buf.Write(data[6 : len+6])
+	}
+	log.Infof("One extra: %b", oneExtra)
+	if oneExtra {
+		data, _ := b.ReadData()
+		buf.Write(data[2 : data[1]+2])
+	}
+	bytes := buf.Bytes()
+	sum := crc32.ChecksumIEEE(bytes)
+	if binary.BigEndian.Uint32(checksum) != sum {
+		log.Warnf("Checksum missmatch. checksum is: %x. want: %d", sum, checksum)
+		log.Warnf("Data: %s", hex.EncodeToString(bytes))
+
+		b.WriteCmd(CmdFail)
+		return nil, errors.New("Checksum missmatch")
+	}
+
+	b.WriteCmd(CmdSuccess)
+
+	return fromByteArray(bytes)
 }
