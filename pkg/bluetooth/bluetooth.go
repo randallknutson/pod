@@ -78,7 +78,7 @@ func New(adapterID string) (*Ble, error) {
 			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Debugf("Received CMD:  %x", data)
+					log.Tracef("Received CMD:  %x", data)
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.cmdInput <- Packet(ret)
@@ -95,7 +95,7 @@ func New(adapterID string) (*Ble, error) {
 							}
 							packet := <-b.cmdOutput
 							ret, err := n.Write(packet)
-							log.Debugf("CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
+							log.Tracef("CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
 								log.Fatalf("Error writing CMD: %s", err)
 							}
@@ -114,7 +114,7 @@ func New(adapterID string) (*Ble, error) {
 							}
 							packet := <-b.dataOutput
 							ret, err := n.Write(packet)
-							log.Debugf("DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
+							log.Tracef("DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
 								log.Fatalf("Error writing DATA: %s ", err)
 							}
@@ -124,7 +124,7 @@ func New(adapterID string) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Debugf("Received DATA %x", data)
+					log.Tracef("Received DATA %x", data)
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)
@@ -187,10 +187,6 @@ func (b *Ble) ReadData() (Packet, error) {
 
 func (p Packet) String() string {
 	return hex.EncodeToString(p)
-}
-
-func (m Message) String() string {
-	return hex.EncodeToString(m.Data)
 }
 
 func (b *Ble) ReadMessage() (*Message, error) {
@@ -348,7 +344,7 @@ func (b *Ble) readMessage(cmd Packet) (*Message, error) {
 		checksum = data[2:6]
 		buf.Write(data[6 : len+6])
 	}
-	log.Debugf("One extra: %t", oneExtra)
+	log.Tracef("One extra: %t", oneExtra)
 	if oneExtra {
 		data, _ := b.ReadData()
 		buf.Write(data[2 : data[1]+2])

@@ -1,6 +1,12 @@
 
+from Crypto.Cipher import AES
+from Crypto.Hash import CMAC
+from Crypto.Random import get_random_bytes
+
+from CryptoMobile.Milenage import  Milenage
 from textwrap import wrap
 import sys
+
 
 # https://tools.ietf.org/html/rfc3748
 CODE_BIN={
@@ -187,9 +193,6 @@ class PodCommand():
         """
 
 
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-
 def decrypt(ck, nonce, data, expected):
     print(f"Received: CK: {ck}, Nonce: {nonce}, Data:{data}")
     bin_nonce = bytes.fromhex(nonce)
@@ -241,7 +244,6 @@ def encrypt(ck, nonce, data, expected):
     print("Decrypted: ", decrypted.hex(','), len(decrypted))
     print("Expected:  ", expected, len(expected.replace(',',''))/2)
 
-from CryptoMobile.Milenage import Milenage
 
 def milenage(ltk, rand, seq, ck, want_res, autn):
     bin_ltk = bytes.fromhex(ltk)
@@ -372,8 +374,64 @@ def _get_milenage(opc, k, rand, sqn, amf):
 def _bytetostring(b):
     return ''.join(format(x, '02x') for x in b)
 
+
+def key_exchange(pdm_key, pdm_nonce, pdm_sps2, pod_key, pod_nonce, pod_sps2,
+        ltk):
+    pdm_key_bin = bytes.fromhex(pdm_key)
+    pdm_nonce_bin = bytes.fromhex(pdm_nonce)
+    pdm_sps2_bin = bytes.fromhex(pdm_sps2)
+
+    pod_key_bin = bytes.fromhex(pod_key)
+    pod_nonce_bin = bytes.fromhex(pod_nonce)
+    pod_sps2_bin = bytes.fromhex(pod_sps2)
+
+    ltk_bin = bytes.fromhex(ltk)
+
+    print("PDM Key", pdm_key_bin.hex(), len(pdm_key_bin))
+    print("PDM Nonce", pdm_nonce_bin.hex(), len(pdm_nonce_bin))
+    print("PDM SPS2", pdm_sps2_bin.hex(), len(pdm_sps2_bin))
+    
+    print("POD Key", pod_key_bin.hex())
+    print("POD Nonce", pod_nonce_bin.hex())
+    print("POD SPS2", pod_sps2_bin.hex())
+
+    print("PDM Key", pdm_key_bin.hex())
+    print("PDM Nonce", pdm_nonce_bin.hex())
+    print("PDM SPS2", pdm_sps2_bin.hex())
+
+
+    print("LTK", ltk_bin.hex(), len(ltk_bin))
+
+
 if __name__=="__main__":
-    #
+
+    ## SP1, SP2
+    # 53,50,31,3d,00,04,08,20,2e,a9,2c,53,50,32,3d,00,0b,08,20,2e,ab,2c,03,0e,01,00,01,91,
+    # SP1 -> pod ID
+    # SP2 -> get pod status command
+
+    # SPS1
+    # 53,50,53,31,3d,00,30,38,82,8b,3d,0c,24,4d,ce,d0,b2,a2,e5,9c,69,93,3d,86,56,32,e5,b5,f2,8b,df,c2,15,24,d0,1f,d6,51,7d,54,b3,82,9f,96,8c,d6,6d,10,8f,44,0b,c6,0b,89,ee,
+    sps1  = "38,82,8b,3d,0c,24,4d,ce,d0,b2,a2,e5,9c,69,93,3d,86,56,32,e5,b5,f2,8b,df,c2,15,24,d0,1f,d6,51,7d,54,b3,82,9f,96,8c,d6,6d,10,8f,44,0b,c6,0b,89,ee".split(',')
+    pdm_key = sps1[:32]
+    pdm_nonce = sps1[32:]
+    # received from pod
+    # 53,50,53,31,3d,00,30,1d,2d,d1,71,72,aa,dc,c9,fb,91,51,e0,ed,ad,67,e5,01,b2,86,00,de,81,f7,5b,7b,b0,9d,5d,cb,1d,00,5f,d5,2d,a5,2f,1d,6e,0b,5c,60,bc,fb,35,58,08,74,51,
+    sps1_pod = "1d,2d,d1,71,72,aa,dc,c9,fb,91,51,e0,ed,ad,67,e5,01,b2,86,00,de,81,f7,5b,7b,b0,9d,5d,cb,1d,00,5f,d5,2d,a5,2f,1d,6e,0b,5c,60,bc,fb,35,58,08,74,51".split(',')
+    pod_key = sps1_pod[:32]
+    pod_nonce = sps1_pod[32:]
+
+    pdm_sps2 = "37,a0,da,ac,48,75,43,a4,26,eb,b3,a8,00,8c,09,f5".replace(',','')
+    pod_sps2 = "19,3b,10,dc,3f,8c,c0,6a,60,49,c4,0e,0a,43,ab,9a".replace(',','')
+    ltk = "c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd".replace(',','')
+
+    key_exchange(''.join(pdm_key), ''.join(pdm_nonce), pdm_sps2,
+        ''.join(pod_key), ''.join(pod_nonce), pod_sps2,
+        ltk)
+
+    # p0 = 'a5'
+
+    sys.exit(0)
     # 2020-03-04 19:37:04.014  1342  2618 D PairingMasterModule LTK: c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd,
     # 2020-03-04 19:37:04.086  1342  2618 I ConnectionManager **************** MY ID IS *********************08,20,2e,a8,
     # 2020-03-04 19:37:04.087  1342  2618 D EapAkaMasterModule Eap aka start session sequence 00,00,00,00,00,01,
@@ -437,3 +495,6 @@ if __name__=="__main__":
     nonce = "6c,ff,5d,18,b7,61,6c,ae,00,00,00,00,01".replace(',','')
 
     encrypt(ck, nonce, ble_hex, expected)
+
+
+
