@@ -16,7 +16,7 @@ func parseStringByte(expectedNames []string, data []byte) (map[string][]byte, er
 		data = data[n:]
 		length := int(data[0])<<8 | int(data[1])
 		ret[name] = data[2 : 2+length]
-		log.Debugf("Read field: %s :: %x :: %d", name, ret[name], len(ret[name]))
+		log.Tracef("Read field: %s :: %x :: %d", name, ret[name], len(ret[name]))
 
 		data = data[2+length:]
 	}
