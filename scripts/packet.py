@@ -1,7 +1,9 @@
 
 from Crypto.Cipher import AES
+from Crypto.Hash import Poly1305,CMAC
 from CryptoMobile.Milenage import Milenage
-
+import curve25519
+from impacket.crypto import AES_CMAC, AES_CMAC_PRF_128
 from textwrap import wrap
 import sys
 import argparse
@@ -380,41 +382,64 @@ def key_exchange(args):
     # 53,50,31,3d,00,04,08,20,2e,a9,2c,53,50,32,3d,00,0b,08,20,2e,ab,2c,03,0e,01,00,01,91,
     # SP1 -> pod ID
     # SP2 -> get pod status command
+    #
+    # PDM LTK: 61,06,b7,48,b0,a3,ff,1d,f4,0a,bc,4a,00,33,95,02
 
-    # SPS1
-    # 53,50,53,31,3d,00,30,38,82,8b,3d,0c,24,4d,ce,d0,b2,a2,e5,9c,69,93,3d,86,56,32,e5,b5,f2,8b,df,c2,15,24,d0,1f,d6,51,7d,54,b3,82,9f,96,8c,d6,6d,10,8f,44,0b,c6,0b,89,ee,
-    sps1 = "38,82,8b,3d,0c,24,4d,ce,d0,b2,a2,e5,9c,69,93,3d,86,56,32,e5,b5,f2,8b,df,c2,15,24,d0,1f,d6,51,7d,54,b3,82,9f,96,8c,d6,6d,10,8f,44,0b,c6,0b,89,ee".split(',')
-    pdm_key = sps1[:32]
-    pdm_nonce = sps1[32:]
-    # received from pod
-    # 53,50,53,31,3d,00,30,1d,2d,d1,71,72,aa,dc,c9,fb,91,51,e0,ed,ad,67,e5,01,b2,86,00,de,81,f7,5b,7b,b0,9d,5d,cb,1d,00,5f,d5,2d,a5,2f,1d,6e,0b,5c,60,bc,fb,35,58,08,74,51,
-    sps1_pod = "1d,2d,d1,71,72,aa,dc,c9,fb,91,51,e0,ed,ad,67,e5,01,b2,86,00,de,81,f7,5b,7b,b0,9d,5d,cb,1d,00,5f,d5,2d,a5,2f,1d,6e,0b,5c,60,bc,fb,35,58,08,74,51".split(',')
-    pod_key = sps1_pod[:32]
-    pod_nonce = sps1_pod[32:]
+    # PDM LTK: 6106b748b0a3ff1df40abc4a00339502
+    # PDM public 8a81e222a81f2f8f2529b58190d37ed077b64d0a5c8c8f58eaacae20e46d6865
+    # PDM nonce: 9a8ceb0496ec04a6c9d7eea0cf67e633
+    # POD public: 2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74
+    # POD secret: 0000000000000000000000000000000000000000000000000000000000000040
+    # POD Nonce: 00000000000000000000000000000000
+    # POD LTK: b8b0f890dc86ea553c8198195822d818a6855eb9df556e0d20ec4a1acca2671e
+    # Received SPS2  7136e908b86d336bc0b19afd4f0b2812
 
-    pdm_sps2 = "37,a0,da,ac,48,75,43,a4,26,eb,b3,a8,00,8c,09,f5".replace(',', '')
-    pod_sps2 = "19,3b,10,dc,3f,8c,c0,6a,60,49,c4,0e,0a,43,ab,9a".replace(',', '')
-    ltk = "c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd".replace(',', '')
+    pdm_ltk = bytes.fromhex("61,06,b7,48,b0,a3,ff,1d,f4,0a,bc,4a,00,33,95,02".replace(",", ""))
+    pdm_public = bytes.fromhex("8a81e222a81f2f8f2529b58190d37ed077b64d0a5c8c8f58eaacae20e46d6865")
+    pdm_nonce = bytes.fromhex("9a8ceb0496ec04a6c9d7eea0cf67e633")
+    pdm_sps2 = bytes.fromhex("7136e908b86d336bc0b19afd4f0b2812")
 
-    pdm_key_bin = bytes.fromhex(pdm_key)
-    pdm_nonce_bin = bytes.fromhex(pdm_nonce)
-    pdm_sps2_bin = bytes.fromhex(pdm_sps2)
+    pod_nonce = bytes.fromhex("00000000000000000000000000000000")
+    pod_secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000040")
+    pod_public = bytes.fromhex("2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74")
+    pod_ltk = bytes.fromhex("b8b0f890dc86ea553c8198195822d818a6855eb9df556e0d20ec4a1acca2671e")
 
-    pod_key_bin = bytes.fromhex(pod_key)
-    pod_nonce_bin = bytes.fromhex(pod_nonce)
-    pod_sps2_bin = bytes.fromhex(pod_sps2)
+    private = curve25519.Private()
+    private.private = pod_secret
+    public = private.get_public()
+    print(public.serialize().hex())
+    pdm_curve_public = curve25519.Public(pdm_public)
+    print(private.get_shared_key(pdm_curve_public, hashfunc=lambda x: x).hex())
+    
+    #pod_public, pdm_public = pdm_public, pod_public
+    #pdm_nonce, pod_nonce = pod_nonce, pdm_nonce
 
-    ltk_bin = bytes.fromhex(ltk)
+    key = pod_public[-4:] + pdm_public[-4:] + pod_nonce[-4:] + pdm_nonce[-4:]
+    aes = CMAC.new(key, ciphermod=AES)
+    mac1 = aes.update(pod_ltk).digest()
+    print("mac1 :", mac1.hex())
+    
+    mac2 = AES_CMAC(key, pod_ltk, len(pod_ltk))
+    print("mac2: ", mac2.hex())
 
-    print("PDM Key", pdm_key_bin.hex(), len(pdm_key_bin))
-    print("PDM Nonce", pdm_nonce_bin.hex(), len(pdm_nonce_bin))
-    print("PDM SPS2", pdm_sps2_bin.hex(), len(pdm_sps2_bin))
+    aes2 = CMAC.new(mac1, ciphermod=AES)
+    bb_data = bytes.fromhex("01") + bytes("TWIt", "ascii") + pod_nonce + pdm_nonce + bytes.fromhex("0100")
+    print(bb_data)
+    bb = aes2.update(bb_data).digest()
+    print("bb :", bb.hex())
 
-    print("POD Key", pod_key_bin.hex())
-    print("POD Nonce", pod_nonce_bin.hex())
-    print("POD SPS2", pod_sps2_bin.hex())
+    bb2 = AES_CMAC(mac1, bb_data, len(bb_data))
+    print("bb2: ", bb2.hex())
 
-    print("LTK", ltk_bin.hex(), len(ltk_bin))
+
+    aes2 = CMAC.new(mac1, ciphermod=AES)
+    ab_data = bytes.fromhex("02") + bytes("TWIt", "ascii") + pod_nonce + pdm_nonce + bytes.fromhex("0100")
+    ab = aes2.update(ab_data).digest()
+    print("ab :", ab.hex())
+    ab2 = AES_CMAC(mac1, ab_data, len(ab_data))
+    print("ab2: ", ab2.hex())
+
+    print("Expected: ", pdm_ltk.hex())
 
 
 def eap_aka(args):
@@ -468,7 +493,6 @@ if __name__ == "__main__":
         subparser.set_defaults(func=function)
 
     args = parser.parse_args()
-    print(args)
     if not args.func:
         parser.print_help()
         sys.exit()
