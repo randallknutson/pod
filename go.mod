@@ -8,6 +8,7 @@ require (
 	github.com/paypal/gatt v0.0.0-20151011220935-4ae819d591cf
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1 // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )
