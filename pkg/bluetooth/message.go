@@ -131,7 +131,7 @@ func fromByteArray(data []byte) (*Message, error) {
 	var n = data[6]<<3 | data[7]>>5
 	if int(n) > len(data)-16 {
 		spew.Dump(ret)
-		return nil, fmt.Errorf("received length is too big in %x. Length:%d . remaining: %d. %s", data, n, len(data)-16)
+		return nil, fmt.Errorf("received length is too big in %x. Length:%d . remaining: %d", data, n, len(data)-16)
 	}
 	ret.Source = data[8:12]
 	ret.Destination = data[12:16]
