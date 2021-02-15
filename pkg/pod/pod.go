@@ -93,9 +93,7 @@ func (p *Pod) StartActivation() {
 
 func (p *Pod) EapAka() {
 
-	pair := &eap.EapAkaChallenge{
-		Seq: 1,
-	}
+	pair := eap.NewEapAkaChallenge(p.ltk)
 
 	msg, _ := p.ble.ReadMessage()
 	err := pair.ParseChallenge(msg)
@@ -113,5 +111,9 @@ func (p *Pod) EapAka() {
 	if err != nil {
 		log.Fatalf("Error parsing the EAP-AKA Success packet")
 	}
-	// Done?? get pod versuion
+	ck, nonce := pair.CKNonce()
+	log.Infof("Got CK: %x", ck)
+	log.Infof("Got Nonce: %x", nonce)
+
+	// ??? Start encryption ???
 }

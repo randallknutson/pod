@@ -120,7 +120,7 @@ func (e *EapAkaChallenge) ParseChallenge(msg *bluetooth.Message) error {
 	if err != nil {
 		return fmt.Errorf("error parsing eap message: %s", err)
 	}
-	log.Debugf("Challenge: %s", spew.Sdump(eapChallenge))
+	log.Debugf("challenge: %s", spew.Sdump(eapChallenge))
 	e.rand = eapChallenge.Attributes[AT_RAND].Data
 	e.autn = eapChallenge.Attributes[AT_AUTN].Data
 	e.pdmIV = eapChallenge.Attributes[AT_CUSTOM_IV].Data
@@ -140,6 +140,7 @@ func (e *EapAkaChallenge) CKNonce() ([]byte, []byte) {
 }
 
 func (e *EapAkaChallenge) GenerateChallengeResponse() (*bluetooth.Message, error) {
+	var err error
 	ret := bluetooth.NewMessage(bluetooth.MessageTypeSessionEstablishment, e.podID, e.pdmID)
 	mil := milenage.New(
 		e.k,
@@ -151,12 +152,10 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*bluetooth.Message, error
 
 	// TODO check AUTN
 	// TODO check if IK/AK is used for anything
-	res, ck, _, _, err := mil.F2345()
+	e.res, e.ck, _, _, err = mil.F2345()
 	if err != nil {
 		return nil, err
 	}
-	e.ck = ck
-	e.res = res
 
 	eap := &EapAka{
 		Code: CodeReponse,
