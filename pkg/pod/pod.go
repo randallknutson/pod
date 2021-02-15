@@ -2,6 +2,8 @@ package pod
 
 import (
 	"github.com/avereha/pod/pkg/bluetooth"
+	"github.com/avereha/pod/pkg/eap"
+
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 )
@@ -16,7 +18,12 @@ const (
 )
 
 type Pod struct {
-	ble *bluetooth.Ble
+	ble   *bluetooth.Ble
+	ltk   []byte
+	id    []byte // 4 byte
+	ck    []byte
+	nonce []byte
+	seq   uint32 // or 16?
 }
 
 func New(ble *bluetooth.Ble) *Pod {
@@ -74,10 +81,37 @@ func (p *Pod) StartActivation() {
 	}
 	p.ble.WriteMessage(msg)
 
-	ltk, err := pair.LTK()
+	p.ltk, err = pair.LTK()
 	if err != nil {
-		log.Fatalf("Could not get LTK %s", err)
+		log.Fatalf("could not get LTK %s", err)
 	}
-	log.Infof("LTK %x", ltk)
+	log.Infof("LTK %x", p.ltk)
+	p.EapAka()
+
 	// here we reached Eap AKA!
+}
+
+func (p *Pod) EapAka() {
+
+	pair := &eap.EapAkaChallenge{
+		Seq: 1,
+	}
+
+	msg, _ := p.ble.ReadMessage()
+	err := pair.ParseChallenge(msg)
+	if err != nil {
+		log.Fatalf("Error parsing the EAP-AKA challenge")
+	}
+
+	msg, err = pair.GenerateChallengeResponse()
+	if err != nil {
+		log.Fatalf("error generating the eap-aka challenge response")
+	}
+
+	msg, _ = p.ble.ReadMessage()
+	err = pair.ParseSuccess(msg)
+	if err != nil {
+		log.Fatalf("Error parsing the EAP-AKA Success packet")
+	}
+	// Done?? get pod versuion
 }
