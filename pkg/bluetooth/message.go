@@ -10,10 +10,10 @@ import (
 type MessageType byte
 
 const (
-	MessageTypeClearMessage MessageType = iota
-	MessageTypeEncryptedMessage
-	MessageTypeSessionEstablishmentMessage
-	MessageTypePairingMessage
+	MessageTypeClear MessageType = iota
+	MessageTypeEncrypted
+	MessageTypeSessionEstablishment
+	MessageTypePairing
 	MagicPattern = "TW"
 )
 
@@ -51,6 +51,18 @@ func (f flag) get(index byte) byte {
 		return 0
 	}
 	return 1
+}
+
+func NewMessage(t MessageType, source, destination []byte) *Message {
+	msg := &Message{
+		Source:      make([]byte, 4),
+		Destination: make([]byte, 4),
+		Type:        t,
+	}
+
+	copy(msg.Source, source)
+	copy(msg.Destination, destination)
+	return msg
 }
 
 func (m *Message) toByteArray() []byte {
@@ -93,6 +105,7 @@ func (m *Message) toByteArray() []byte {
 	if m.Payload != nil {
 		buf.Write(m.Payload)
 	}
+
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret
@@ -120,7 +133,7 @@ func fromByteArray(data []byte) (*Message, error) {
 	ret.Gateway = f.get(3) == 1
 	ret.Type = MessageType(f.get(7) | f.get(6)<<1 | f.get(5)<<2 | f.get(4)<<3)
 
-	if ret.Type > MessageTypePairingMessage {
+	if ret.Type > MessageTypePairing {
 		return nil, fmt.Errorf("Invalid message type found in %x", data)
 	}
 	if ret.Version != 0 {
@@ -135,7 +148,7 @@ func fromByteArray(data []byte) (*Message, error) {
 	}
 	ret.Source = data[8:12]
 	ret.Destination = data[12:16]
-	if ret.Type == MessageTypeEncryptedMessage {
+	if ret.Type == MessageTypeEncrypted {
 		ret.Payload = data[16 : 16+n+8]
 	} else {
 		ret.Payload = data[16 : 16+n]
