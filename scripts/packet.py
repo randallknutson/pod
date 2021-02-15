@@ -1,9 +1,10 @@
 
+import configparser
+from collections import namedtuple
 from Crypto.Cipher import AES
-from Crypto.Hash import Poly1305,CMAC
+from Crypto.Hash import CMAC
 from CryptoMobile.Milenage import Milenage
 import curve25519
-from impacket.crypto import AES_CMAC, AES_CMAC_PRF_128
 from textwrap import wrap
 import sys
 import argparse
@@ -377,69 +378,65 @@ def _bytetostring(b):
     return ''.join(format(x, '02x') for x in b)
 
 
+def cmac(key, data):
+    aes = CMAC.new(key, ciphermod=AES)
+    mac = aes.update(data).digest()
+    # print("mac ", mac.hex(), " data len", len(data))
+    return mac
+
+
 def key_exchange(args):
-    # SP1, SP2
-    # 53,50,31,3d,00,04,08,20,2e,a9,2c,53,50,32,3d,00,0b,08,20,2e,ab,2c,03,0e,01,00,01,91,
-    # SP1 -> pod ID
-    # SP2 -> get pod status command
-    #
-    # PDM LTK: 61,06,b7,48,b0,a3,ff,1d,f4,0a,bc,4a,00,33,95,02
+    fields = [
+        "pdm_ltk",
+        "pdm_public",
+        "pdm_nonce",
+        "pdm_sps2",
 
-    # PDM LTK: 6106b748b0a3ff1df40abc4a00339502
-    # PDM public 8a81e222a81f2f8f2529b58190d37ed077b64d0a5c8c8f58eaacae20e46d6865
-    # PDM nonce: 9a8ceb0496ec04a6c9d7eea0cf67e633
-    # POD public: 2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74
-    # POD secret: 0000000000000000000000000000000000000000000000000000000000000040
-    # POD Nonce: 00000000000000000000000000000000
-    # POD LTK: b8b0f890dc86ea553c8198195822d818a6855eb9df556e0d20ec4a1acca2671e
-    # Received SPS2  7136e908b86d336bc0b19afd4f0b2812
+        "pod_nonce",
+        "pod_secret",
+        "pod_public",
+        "pod_ltk",
+        "pod_sps2",
+    ]
 
-    pdm_ltk = bytes.fromhex("61,06,b7,48,b0,a3,ff,1d,f4,0a,bc,4a,00,33,95,02".replace(",", ""))
-    pdm_public = bytes.fromhex("8a81e222a81f2f8f2529b58190d37ed077b64d0a5c8c8f58eaacae20e46d6865")
-    pdm_nonce = bytes.fromhex("9a8ceb0496ec04a6c9d7eea0cf67e633")
-    pdm_sps2 = bytes.fromhex("7136e908b86d336bc0b19afd4f0b2812")
-
-    pod_nonce = bytes.fromhex("00000000000000000000000000000000")
-    pod_secret = bytes.fromhex("0000000000000000000000000000000000000000000000000000000000000040")
-    pod_public = bytes.fromhex("2fe57da347cd62431528daac5fbb290730fff684afc4cfc2ed90995f58cb3b74")
-    pod_ltk = bytes.fromhex("b8b0f890dc86ea553c8198195822d818a6855eb9df556e0d20ec4a1acca2671e")
+    if args.list_fields:
+        print(fields)
+        sys.exit()
+    Input = namedtuple("Input", fields)
+    bin_data = dict()
+    for f in fields:
+        bin_data[f] = bytes.fromhex(args.config.get("key_exchange", f))
+    data = Input(**bin_data)
 
     private = curve25519.Private()
-    private.private = pod_secret
+    private.private = data.pod_secret
     public = private.get_public()
     print(public.serialize().hex())
-    pdm_curve_public = curve25519.Public(pdm_public)
-    print(private.get_shared_key(pdm_curve_public, hashfunc=lambda x: x).hex())
+    pdm_curve_public = curve25519.Public(data.pdm_public)
+    shared_secret = private.get_shared_key(pdm_curve_public, hashfunc=lambda x: x)
+    print("POD LTK:                ", data.pod_ltk.hex())
+    print("Donna LTK double check: ", shared_secret.hex(), "\n") 
+
+    first_key = data.pod_public[-4:] + data.pdm_public[-4:] + data.pod_nonce[-4:] + data.pdm_nonce[-4:]
+    temp_mac = cmac(first_key, shared_secret)    
     
-    #pod_public, pdm_public = pdm_public, pod_public
-    #pdm_nonce, pod_nonce = pod_nonce, pdm_nonce
+    bb_data = bytes.fromhex("01") + bytes("TWIt", "ascii") + data.pod_nonce + data.pdm_nonce + bytes.fromhex("0001")
+    bb = cmac(temp_mac, bb_data)
 
-    key = pod_public[-4:] + pdm_public[-4:] + pod_nonce[-4:] + pdm_nonce[-4:]
-    aes = CMAC.new(key, ciphermod=AES)
-    mac1 = aes.update(pod_ltk).digest()
-    print("mac1 :", mac1.hex())
-    
-    mac2 = AES_CMAC(key, pod_ltk, len(pod_ltk))
-    print("mac2: ", mac2.hex())
+    ab_data = bytes.fromhex("02") + bytes("TWIt", "ascii") + data.pod_nonce + data.pdm_nonce + bytes.fromhex("0001")
+    ab = cmac(temp_mac, ab_data)
+    print("LTK :     ", ab.hex())
+    print("Expected: ", data.pdm_ltk.hex(), "\n")
 
-    aes2 = CMAC.new(mac1, ciphermod=AES)
-    bb_data = bytes.fromhex("01") + bytes("TWIt", "ascii") + pod_nonce + pdm_nonce + bytes.fromhex("0100")
-    print(bb_data)
-    bb = aes2.update(bb_data).digest()
-    print("bb :", bb.hex())
+    pdm_conf_data = bytes("KC_2_U", "ascii") + data.pdm_nonce + data.pod_nonce
+    pdm_conf = cmac(bb, pdm_conf_data)
+    print("PDM conf: ", pdm_conf.hex())
+    print("Expected:  ", data.pdm_sps2.hex(), "\n")
 
-    bb2 = AES_CMAC(mac1, bb_data, len(bb_data))
-    print("bb2: ", bb2.hex())
-
-
-    aes2 = CMAC.new(mac1, ciphermod=AES)
-    ab_data = bytes.fromhex("02") + bytes("TWIt", "ascii") + pod_nonce + pdm_nonce + bytes.fromhex("0100")
-    ab = aes2.update(ab_data).digest()
-    print("ab :", ab.hex())
-    ab2 = AES_CMAC(mac1, ab_data, len(ab_data))
-    print("ab2: ", ab2.hex())
-
-    print("Expected: ", pdm_ltk.hex())
+    pod_conf_data = bytes("KC_2_V", "ascii") + data.pod_nonce + data.pdm_nonce  # ???
+    pod_conf = cmac(bb, pod_conf_data)
+    print("PDM conf:  ", pod_conf.hex())
+    print("Expected:  ", data.pod_sps2.hex())
 
 
 def eap_aka(args):
@@ -486,6 +483,9 @@ functions = dict(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Encryption experiments")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-i", "--input", help="File containing test data")
+    group.add_argument("-l", "--list-fields", action="store_true", help="List the expected fields in the test data file for this experiment")
     subparsers = parser.add_subparsers()
     parser.set_defaults(func=None)
     for name, function in functions.items():
@@ -493,6 +493,10 @@ if __name__ == "__main__":
         subparser.set_defaults(func=function)
 
     args = parser.parse_args()
+    if args.input:
+        args.config = configparser.ConfigParser()
+        args.config.read(args.input)
+    
     if not args.func:
         parser.print_help()
         sys.exit()
