@@ -80,12 +80,12 @@ class Ble():
     def __str__(self):
         ret = f"""
             Preamble: {self.preamble}
-            From: {','.join(list(map(to_hex,self._from)))}
-            To: {','.join(list(map(to_hex,self._to)))}
+            From: {self._from.hex()}
+            To: {self._to.hex()}
             Data: {self.data} :: {len(self.data)}
-            Data Hex: {','.join(list(map(to_hex, self.data)))}
+            Data Hex: {self.data.hex()}
             Unknown: {self.unknown}
-            UnknownHex: {','.join(list(map(to_hex, self.unknown)))}
+            UnknownHex: {self.unknown.hex()}
         """
         if self.eap:
             ret += str(self.eap)
@@ -102,7 +102,7 @@ class Attribute():
         return f"""
                 Type: {self.type} :: {self.type_bin}
                 Data: {self.data} :: {len(self.data)}
-                Hex: {','.join(list(map(to_hex, self.data)))}
+                Hex: {self.data.hex()}
         """
 
 
@@ -118,7 +118,7 @@ class Res(Attribute):
                 Type: {self.type} :: {self.type_bin}
                 Data: {self.data}
                 Length: {self.length}
-                Hex: {','.join(list(map(to_hex, self.data)))}
+                Hex: {self.data.hex()}
         """
 
 
@@ -185,10 +185,6 @@ class Eap():
         return ret
 
 
-def to_hex(a):
-    return "{0:02x}".format(a)
-
-
 class PodCommand():
     def __init__(self, cmd):
         self.cmd = cmd
@@ -198,78 +194,53 @@ class PodCommand():
         return f"""
             Raw: {self.cmd}
             Data: {self.data}
-            Hex: {','.join(list(map(to_hex, self.data)))}
+            Hex: {self.data.hex()}
         """
 
 
 def decrypt(args):
+    fields = [
+        "packet_data",
+        "expected",
+        "nonce",
+        "ck"
+    ]
+    if args.list_fields:
+        print(fields)
+        sys.exit()
+    data = config_to_input("decrypt", args.config, fields)
 
-    # 2020-03-04 19:37:05.044  1342  1401 I TwiBleManager bytes received on ble 54,57,11,a1,05,08,04,a0,08,20,2e,a9,08,20,2e,a8,6d,fd,d5,e9,26,6d,54,9e,82,0e,a9,a2,68,0c,8a,88,18,0f,d3,df,34,2a,13,e8,8e,cd,3a,db,4f,a0,95,eb,0a,ed,c1,e0,e8,b6,c9,48,07,8e,d0,c9,72,
-    # 2020-03-04 19:37:05.044  1342  1401 I CentralClient  notifyReadCompleted 0
-    # 2020-03-04 19:37:05.045  1342  1401 D EnDecryptionModule Decrypt NONCE is 6c,ff,5d,18,b7,61,6c,ae,80,00,00,00,02,
-    # 2020-03-04 19:37:05.045  1342  1401 I TwiCommunicationProtocol ------------On read  notification number is: 2
-    # 2020-03-04 19:37:05.046  1342  1401 I TwiCommunicationProtocol 3b decrypted bytes => 30,2e,30,3d,00,1f,ff,ff,ff,ff,30,17,01,15,03,1d,00,08,08,00,04,02,08,13,9a,51,00,11,92,91,00,ff,ff,ff,ff,83,71,
+    print(f"Decrypt: CK: {data.ck.hex()}, Nonce: {data.nonce.hex()}, Data:{data.packet_data.hex()}")
 
-    # Decrypt
-    ble = Ble("54,57,11,a1,05,08,04,a0,08,20,2e,a9,08,20,2e,a8,6d,fd,d5,e9,26,6d,54,9e,82,0e,a9,a2,68,0c,8a,88,18,0f,d3,df,34,2a,13,e8,8e,cd,3a,db,4f,a0,95,eb,0a,ed,c1,e0,e8,b6,c9,48,07,8e,d0,c9,72")
-    received_hex = ''.join(list(map(to_hex, ble.data)))
-    nonce = "6c,ff,5d,18,b7,61,6c,ae,80,00,00,00,02".replace(',', '')
-    expected = "30,2e,30,3d,00,1f,ff,ff,ff,ff,30,17,01,15,03,1d,00,08,08,00,04,02,08,13,9a,51,00,11,92,91,00,ff,ff,ff,ff,83,71"
-    data = received_hex
-    ck = "55,79,9f,d2,66,64,cb,f6,e4,76,52,5e,2d,ee,52,c6".replace(',', '')
+    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce)
+    decrypted = cipher.decrypt(data.packet_data)
 
-    print(f"Decrypt: CK: {ck}, Nonce: {nonce}, Data:{data}")
-    bin_nonce = bytes.fromhex(nonce)
-    bin_ck = bytes.fromhex(ck)
-    bin_data = bytes.fromhex(data)
-
-    print("Nonce", bin_nonce, len(bin_nonce))
-    print("Ck", bin_ck, len(bin_ck))
-    print("Data", bin_data, len(bin_data))
-
-    cipher = AES.new(bin_ck, AES.MODE_CCM, bin_nonce)
-    # cipher.update(bin_data)
-    decrypted = cipher.decrypt(bin_data)
-
-    print("Decrypted: ", decrypted.hex(','), len(decrypted))
-    print("Expected:  ", expected, len(expected.replace(',', '')) / 2)
+    print("Decrypted: ", decrypted.hex(), len(decrypted))
+    print("Expected:  ", data.expected.hex(), len(data.expected))
 
 
 def encrypt(args):
-    # 2020-03-04 19:37:04.709  1342  1401 I TwiBleManager bytes going on ble 54,57,11,01,07,00,03,40,08,20,2e,a8,08,20,2e,a9,ab,35,d8,31,60,9b,b8,fe,3a,3b,de,5b,18,37,24,9a,16,db,f8,e4,d3,05,e9,75,dc,81,7c,37,07,cc,41,5f,af,8a,
-    # Encrypt
-    # 2020-03-04 19:37:04.737  1342  1401 I PodComm pod command: FFFFFFFF2C060704FFFFFFFF817A
-    # 2020-03-04 19:37:04.709  1342  1401 I TwiBleManager bytes going on ble 54,57,11,01,07,00,03,40,08,20,2e,a8,08,20,2e,a9,ab,35,d8,31,60,9b,b8,fe,3a,3b,de,5b,18,37,24,9a,16,db,f8,e4,d3,05,e9,75,dc,81,7c,37,07,cc,41,5f,af,8a,
-    # 2020-03-04 19:37:04.692  1342  1401 D EnDecryptionModule Encrypt NONCE is 6c,ff,5d,18,b7,61,6c,ae,00,00,00,00,01,
-    ble = Ble("54,57,11,01,07,00,03,40,08,20,2e,a8,08,20,2e,a9,ab,35,d8,31,60,9b,b8,fe,3a,3b,de,5b,18,37,24,9a,16,db,f8,e4,d3,05,e9,75,dc,81,7c,37,07,cc,41,5f,af,8a")
-    ble_hex = ''.join(list(map(to_hex, ble.data)))
-    expected = bytes.fromhex("FFFFFFFF2C060704FFFFFFFF817A").hex(',')
-    nonce = "6c,ff,5d,18,b7,61,6c,ae,00,00,00,00,01".replace(',', '')
-    ck = "55,79,9f,d2,66,64,cb,f6,e4,76,52,5e,2d,ee,52,c6".replace(',', '')
-    data = ble_hex
-    print(f"Encrypt: CK: {ck}, Nonce: {nonce}, Data:{data}")
-    bin_nonce = bytes.fromhex(nonce)
-    bin_ck = bytes.fromhex(ck)
-    bin_data = bytes.fromhex(data)
+    fields = [
+        "packet_data",
+        "command",
+        "nonce",
+        "ck"
+    ]
+    if args.list_fields:
+        print(fields)
+        sys.exit()
+    data = config_to_input("encrypt", args.config, fields)
+    ble = Ble(bin=data.packet_data)
+    print(f"Encrypt: CK: {data.ck.hex()}, Nonce: {data.nonce.hex()}, Data:{data.packet_data.hex()}")
 
-    print("Nonce", bin_nonce, len(bin_nonce))
-    print("Ck", bin_ck, len(bin_ck))
-    print("Data", bin_data, len(bin_data))
+    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce)
+    encrypted = cipher.encrypt(data.command)
 
-    cipher = AES.new(bin_ck, AES.MODE_CCM, bin_nonce)
-    # cipher.update(bin_data)
-    decrypted = cipher.decrypt(bin_data)
-
-    print("Decrypted: ", decrypted.hex(','), len(decrypted))
-    print("Expected:  ", expected, len(expected.replace(',', '')) / 2)
+    print("Encrypted: ", encrypted.hex(), len(encrypted))
+    print("Expected:  ", ble.data.hex(), len(ble.data))
 
 
-def milenage(ltk, rand, seq, ck, want_res, autn):
-    bin_ltk = bytes.fromhex(ltk)
-    bin_rand = bytes.fromhex(rand)
-    bin_seq = bytes.fromhex(seq)
-    bin_ck = bytes.fromhex(ck)
-    bin_autn = bytes.fromhex(autn)
+def milenage(bin_ltk, bin_rand, bin_seq, bin_ck, want_res, bin_autn):
     print("LTK: ", bin_ltk.hex(), len(bin_ltk))
     print("Autn: ", bin_autn.hex(","), len(bin_autn))
     print("Rand: ", bin_rand.hex(), len(bin_rand))
@@ -291,7 +262,7 @@ def milenage(ltk, rand, seq, ck, want_res, autn):
     print("CK is: ", bin_ck.hex(","), len(bin_ck))
     print("Received CK is: ", res_ck.hex(","), len(res_ck))
     print("Got  Res is: ", res.hex(","), len(res))
-    print("Want Res is: ", want_res, len(want_res) / 2)
+    print("Want Res is: ", want_res.hex(","), len(want_res))
 
     print("IK is: ", ik.hex(","), len(ik))
     print("AK is: ", ak.hex(","), len(ak))
@@ -312,12 +283,9 @@ def _get_milenage(opc, k, rand, sqn, amf):
         is a python re-write of the function eap_aka_get_milenage() from
         src/simutil.c
     '''
-    opc = bytearray.fromhex(opc)
-    k = bytearray.fromhex(k)
     # rand gets returned, so it should be left as a hex string
-    _rand = bytearray.fromhex(rand)
-    sqn = bytearray.fromhex(sqn)
-    amf = bytearray.fromhex(amf)
+    _rand = rand
+
     aes1 = AES.new(bytes(k), AES.MODE_ECB)
     tmp1 = _xor(_rand, opc)
     tmp1 = aes1.encrypt(bytes(tmp1))
@@ -385,6 +353,15 @@ def cmac(key, data):
     return mac
 
 
+def config_to_input(section, config, fields):
+    Input = namedtuple("Input", fields)
+    bin_data = dict()
+    for f in fields:
+        field_value = config.get(section, f).replace(",", "")
+        bin_data[f] = bytes.fromhex(field_value)
+    return Input(**bin_data)
+
+
 def key_exchange(args):
     fields = [
         "pdm_ltk",
@@ -402,11 +379,7 @@ def key_exchange(args):
     if args.list_fields:
         print(fields)
         sys.exit()
-    Input = namedtuple("Input", fields)
-    bin_data = dict()
-    for f in fields:
-        bin_data[f] = bytes.fromhex(args.config.get("key_exchange", f))
-    data = Input(**bin_data)
+    data = config_to_input("key_exchange", args.config, fields)
 
     private = curve25519.Private()
     private.private = data.pod_secret
@@ -415,11 +388,11 @@ def key_exchange(args):
     pdm_curve_public = curve25519.Public(data.pdm_public)
     shared_secret = private.get_shared_key(pdm_curve_public, hashfunc=lambda x: x)
     print("POD LTK:                ", data.pod_ltk.hex())
-    print("Donna LTK double check: ", shared_secret.hex(), "\n") 
+    print("Donna LTK double check: ", shared_secret.hex(), "\n")
 
     first_key = data.pod_public[-4:] + data.pdm_public[-4:] + data.pod_nonce[-4:] + data.pdm_nonce[-4:]
-    temp_mac = cmac(first_key, shared_secret)    
-    
+    temp_mac = cmac(first_key, shared_secret)
+
     bb_data = bytes.fromhex("01") + bytes("TWIt", "ascii") + data.pod_nonce + data.pdm_nonce + bytes.fromhex("0001")
     bb = cmac(temp_mac, bb_data)
 
@@ -440,38 +413,43 @@ def key_exchange(args):
 
 
 def eap_aka(args):
-    # 2020-03-04 19:37:04.014  1342  2618 D PairingMasterModule LTK: c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd,
-    # 2020-03-04 19:37:04.086  1342  2618 I ConnectionManager **************** MY ID IS *********************08,20,2e,a8,
-    # 2020-03-04 19:37:04.087  1342  2618 D EapAkaMasterModule Eap aka start session sequence 00,00,00,00,00,01,
+    fields = [
+        "ck",
+        "rand",
+        "seq",
+        "ltk",
+        "res",
+        "autn",
+    ]
 
-    # 2020-03-04 19:37:04.088  1342  2618 D SecurityMasterManager send this msg on comm  01,bd,00,38,17,01,00,00,02,05,00,00,00,c5,5c,78,e8,d3,b9,b9,e9,35,86,0a,72,59,f6,c0,01,05,00,00,c2,cd,12,48,45,11,03,bd,77,a6,c7,ef,88,c4,41,ba,7e,02,00,00,6c,ff,5d,18,
-    # print(Ble("54,57,10,02,05,00,07,00,08,20,2e,a8,08,20,2e,a9,01,bd,00,38,17,01,00,00,02,05,00,00,00,c5,5c,78,e8,d3,b9,b9,e9,35,86,0a,72,59,f6,c0,01,05,00,00,c2,cd,12,48,45,11,03,bd,77,a6,c7,ef,88,c4,41,ba,7e,02,00,00,6c,ff,5d,18", eap=True))
-    print(Eap("01,bd,00,38,17,01,00,00,02,05,00,00,00,c5,5c,78,e8,d3,b9,b9,e9,35,86,0a,72,59,f6,c0,01,05,00,00,c2,cd,12,48,45,11,03,bd,77,a6,c7,ef,88,c4,41,ba,7e,02,00,00,6c,ff,5d,18"))
-    # print(Eap("03,be,00,0 4"))
+    if args.list_fields:
+        print(fields)
+        sys.exit()
+    data = config_to_input("eap_aka", args.config, fields)
 
-    #  Mu ID in construct packet connection 08,20,2e,a8
-    # 2020-03-04 19:37:04.408  1342  1402 D SecurityMasterManager received this msg on comm  02,bd,00,1c,17,01,00,00,03,03,00,40,a4,0b,c6,d1,38,61,44,7e,7e,02,00,00,b7,61,6c,ae,
-    print(Eap("02,bd,00,1c,17,01,00,00,03,03,00,40,a4,0b,c6,d1,38,61,44,7e,7e,02,00,00,b7,61,6c,ae"))
-    # 2020-03-04 19:37:04.529  1342  1401 D EapAkaMasterModule Sequence number after session start is 00,00,00,00,00,02,
-    # 2020-03-04 19:37:04.540  1342  1401 D SecurityMasterManager Controller CK = 55,79,9f,d2,66,64,cb,f6,e4,76,52,5e,2d,ee,52,c6,
-    # 2020-03-04 19:37:04.541  1342  1401 D SecurityMasterManager Controller IV = 6c,ff,5d,18,
-    # 2020-03-04 19:37:04.541  1342  1401 D SecurityMasterManager Node IV = b7,61,6c,ae,
-    ck = "55,79,9f,d2,66,64,cb,f6,e4,76,52,5e,2d,ee,52,c6".replace(',', '')
+    milenage(data.ltk, data.rand, data.seq, data.ck, data.res, data.autn)
+    # print("-----------")
+    # this is not working, because _get_milenage expects OPc instead of OP
+    # amf = "b9b9"
+    # opc = "cdc202d5123e20f62b6d676ac72cb318"
+    # rand, autn, ik, ck, res = _get_milenage(bytes.fromhex(opc), data.ltk, data.rand, data.seq, bytes.fromhex(amf))
 
-    rand = "c2,cd,12,48,45,11,03,bd,77,a6,c7,ef,88,c4,41,ba".replace(",", "")
-    seq = "00,00,00,00,00,01".replace(",", "")
-    ltk = "c0,77,28,99,72,09,72,a3,14,f5,57,de,66,d5,71,dd".replace(",", "")
-    res = "a4,0b,c6,d1,38,61,44,7e"
-    autn = "00,c5,5c,78,e8,d3,b9,b9,e9,35,86,0a,72,59,f6,c0".replace(",", "")
-    milenage(ltk, rand, seq, ck, res, autn)
-    print("-----------")
-    amf = "b9b9"
-    rand, autn, ik, ck, res = _get_milenage('cdc202d5123e20f62b6d676ac72cb318', ltk, rand, seq, amf)
-    print("Rand: ", bytes.fromhex(rand).hex(","))
-    print("Autn: ", bytes.fromhex(autn).hex(","))
-    print("CK: ", bytes.fromhex(ck).hex(","))
-    print("Res: ", bytes.fromhex(res).hex(","))
-    print("Ik: ", bytes.fromhex(ik).hex(","))
+    # print("Rand: ", rand.hex(","))
+    # print("Autn: ", bytes.fromhex(autn).hex(","))
+    # print("CK: ", bytes.fromhex(ck).hex(","))
+    # print("Res: ", bytes.fromhex(res).hex(","))
+    # print("Ik: ", bytes.fromhex(ik).hex(","))
+
+
+def eap_print(args):
+    fields = [
+        "packet_from_log"
+    ]
+    if args.list_fields:
+        print(fields)
+        sys.exit()
+    data = config_to_input("eap_print", args.config, fields)
+    print(Eap(bin=data.packet_from_log))
 
 
 functions = dict(
@@ -479,6 +457,7 @@ functions = dict(
     eap_aka=eap_aka,
     decrypt=decrypt,
     encrypt=encrypt,
+    eap_print=eap_print,
 )
 
 if __name__ == "__main__":
@@ -496,7 +475,7 @@ if __name__ == "__main__":
     if args.input:
         args.config = configparser.ConfigParser()
         args.config.read(args.input)
-    
+
     if not args.func:
         parser.print_help()
         sys.exit()
