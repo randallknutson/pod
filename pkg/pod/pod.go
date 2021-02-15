@@ -105,7 +105,7 @@ func (p *Pod) EapAka() {
 	if err != nil {
 		log.Fatalf("error generating the eap-aka challenge response")
 	}
-
+	p.ble.WriteMessage(msg)
 	msg, _ = p.ble.ReadMessage()
 	err = pair.ParseSuccess(msg)
 	if err != nil {

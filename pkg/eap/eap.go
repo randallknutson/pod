@@ -107,9 +107,10 @@ func NewEapAkaChallenge(k []byte) *EapAkaChallenge {
 	//	amf, _ := hex.DecodeString("b9b9")
 
 	return &EapAkaChallenge{
-		k:   k,
-		op:  op,
-		amf: 47545, // b9b9
+		k:     k,
+		op:    op,
+		amf:   47545,           // b9b9
+		podIV: make([]byte, 6), //  0 for now, TODO
 	}
 }
 
@@ -158,13 +159,27 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*bluetooth.Message, error
 	}
 
 	eap := &EapAka{
-		Code: CodeReponse,
+		Code:       CodeReponse,
+		Attributes: make(map[AttributeType]*Attribute),
 	}
-
+	eap.Attributes[AT_RES] = &Attribute{
+		Type: AT_RES,
+		Data: e.res,
+	}
+	eap.Attributes[AT_CUSTOM_IV] = &Attribute{
+		Type: AT_CUSTOM_IV,
+		Data: e.podIV,
+	}
 	ret.Payload, err = eap.Marshal()
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("EapAka AUTN %x", e.autn)
+	log.Debugf("EapAka RES %x", e.res)
+	log.Debugf("EapAka CK %x", e.ck)
+	log.Debugf("EapAka K %x", e.k)
+	log.Debugf("EapAka podIV %x", e.podIV)
+	log.Debugf("EapAka pdmIV %x", e.pdmIV)
 
 	return ret, nil
 }
