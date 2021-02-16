@@ -98,7 +98,7 @@ func (p *Pod) EapAka() {
 	msg, _ := p.ble.ReadMessage()
 	err := pair.ParseChallenge(msg)
 	if err != nil {
-		log.Fatalf("Error parsing the EAP-AKA challenge")
+		log.Fatalf("error parsing the EAP-AKA challenge: %s", err)
 	}
 
 	msg, err = pair.GenerateChallengeResponse()
@@ -106,10 +106,12 @@ func (p *Pod) EapAka() {
 		log.Fatalf("error generating the eap-aka challenge response")
 	}
 	p.ble.WriteMessage(msg)
+
 	msg, _ = p.ble.ReadMessage()
+	log.Debugf("Success? %x", msg.Payload)
 	err = pair.ParseSuccess(msg)
 	if err != nil {
-		log.Fatalf("Error parsing the EAP-AKA Success packet")
+		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
 	}
 	ck, nonce := pair.CKNonce()
 	log.Infof("Got CK: %x", ck)

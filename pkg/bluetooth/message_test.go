@@ -2,6 +2,7 @@ package bluetooth
 
 import (
 	"encoding/hex"
+	"reflect"
 	"strings"
 	"testing"
 
