@@ -183,8 +183,8 @@ func NewEapAkaChallenge(k []byte) *EapAkaChallenge {
 	return &EapAkaChallenge{
 		k:     k,
 		op:    op,
-		amf:   47545,           // b9b9
-		podIV: make([]byte, 6), //  0 for now, TODO
+		amf:   47545,                      // b9b9
+		podIV: []byte{0xa, 0xa, 0xa, 0xa}, // constant for now, eaiser to debug. TODO
 	}
 }
 
@@ -209,9 +209,8 @@ func (e *EapAkaChallenge) SqnBytes() []byte {
 	return nil
 }
 
-func (e *EapAkaChallenge) CKNonce() ([]byte, []byte) {
-	nonce := append(e.podIV, e.pdmIV...)
-	nonce = append(nonce, e.SqnBytes()...)
+func (e *EapAkaChallenge) CKNoncePrefix() ([]byte, []byte) {
+	nonce := append(e.pdmIV, e.podIV...)
 
 	return e.ck, nonce
 }

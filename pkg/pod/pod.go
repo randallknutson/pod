@@ -3,6 +3,7 @@ package pod
 import (
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/eap"
+	"github.com/avereha/pod/pkg/encrypt"
 
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
@@ -21,9 +22,11 @@ type Pod struct {
 	ble   *bluetooth.Ble
 	ltk   []byte
 	id    []byte // 4 byte
-	ck    []byte
 	nonce []byte
-	seq   uint32 // or 16?
+	seq   uint64 // or 16?
+
+	noncePrefix []byte
+	ck          []byte
 }
 
 func New(ble *bluetooth.Ble) *Pod {
@@ -87,7 +90,6 @@ func (p *Pod) StartActivation() {
 	}
 	log.Infof("LTK %x", p.ltk)
 	p.EapAka()
-
 	// here we reached Eap AKA!
 }
 
@@ -113,9 +115,32 @@ func (p *Pod) EapAka() {
 	if err != nil {
 		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
 	}
-	ck, nonce := pair.CKNonce()
-	log.Infof("Got CK: %x", ck)
-	log.Infof("Got Nonce: %x", nonce)
+	p.ck, p.noncePrefix = pair.CKNoncePrefix()
+	p.seq = 1
+	log.Infof("Got CK: %x", p.ck)
+	log.Infof("Got Nonce: %x", p.noncePrefix)
+	log.Infof("Using SEQ: %d", p.seq)
 
+	p.CommandLoop()
 	// ??? Start encryption ???
+}
+
+func (p *Pod) CommandLoop() {
+	var lastMsgSeq uint8 = 0
+	for {
+		msg, _ := p.ble.ReadMessage()
+		if msg.SequenceNumber == lastMsgSeq {
+			// this is a retry because we did not answer yet
+			// ignore duplicate commands/mesages
+			continue
+		}
+		log.Debugf("got message: %s", spew.Sdump(msg))
+		cmd, err := encrypt.DecryptCommand(p.ck, p.noncePrefix, p.seq, msg)
+		if err != nil {
+			log.Fatalf("could not decrypt command: %s", err)
+		}
+		log.Info("Received command: %s", string(cmd.Data))
+		log.Info("Received command(hex): %x", cmd.Data)
+		lastMsgSeq = msg.SequenceNumber
+	}
 }

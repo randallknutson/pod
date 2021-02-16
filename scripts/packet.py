@@ -212,9 +212,18 @@ def decrypt(args):
 
     print(f"Decrypt: CK: {data.ck.hex()}, Nonce: {data.nonce.hex()}, Data:{data.packet_data.hex()}")
 
-    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce)
-    decrypted = cipher.decrypt(data.packet_data)
+    actualData = data.packet_data[:-8]
+    print(f"Actual data: {actualData.hex()} :: {len(actualData)}")
+    tag = data.packet_data[-8:]
+    print(f"Tag: {tag.hex()} :: {len(tag)}")
 
+    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce)
+    decrypted = cipher.decrypt(actualData)
+
+    try:    
+        print("Verify: ", cipher.verify(tag))
+    except ValueError:
+        print("NOPE")
     print("Decrypted: ", decrypted.hex(), len(decrypted))
     print("Expected:  ", data.expected.hex(), len(data.expected))
 
