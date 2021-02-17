@@ -2,6 +2,7 @@ package pod
 
 import (
 	"github.com/avereha/pod/pkg/bluetooth"
+	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
 	"github.com/avereha/pod/pkg/encrypt"
 
@@ -135,10 +136,26 @@ func (p *Pod) CommandLoop() {
 			continue
 		}
 		log.Debugf("got message: %s", spew.Sdump(msg))
-		_, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.seq, msg)
+		decrypted, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.seq, msg)
 		if err != nil {
 			log.Fatalf("could not decrypt message: %s", err)
 		}
+		cmd, err := command.Unmarshal(decrypted.Payload)
+		if err != nil {
+			log.Fatalf("could not unmarshal command: %s", err)
+		}
+		log.Infof("Got command: %+v", cmd)
+		response, err := cmd.GetResponse()
+		if err != nil {
+			log.Fatalf("could not get command response: %s", err)
+		}
+		msg, err = response.Marshal()
+		if err != nil {
+			log.Fatalf("could not marshal command response: %s", err)
+		}
+		p.seq++
+		encrypt.EncryptMessage(p.ck, p.noncePrefix, p.seq, msg)
+		p.ble.WriteMessage(msg)
 		lastMsgSeq = msg.SequenceNumber
 	}
 }

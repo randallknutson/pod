@@ -46,17 +46,18 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	tag := msg.Payload[n-8:]
 	encryptedData := msg.Payload[:n-8]
 
-	log.Debugf("MAC: %s", string(tag))
 	log.Debugf("MAC: %x", tag, len(tag))
 	log.Debugf("Data: %x :: %d", encryptedData, len(encryptedData))
 	log.Debugf("Header: %x :: %d", header, len(header))
 
-	decrypted, err := ccm.Open(nil, nonce, msg.Payload, header)
-
+	decrypted, err := ccm.Open([]byte{}, nonce, msg.Payload, header)
 	if err != nil {
 		return nil, fmt.Errorf("could not decrypt: %w", err)
 	}
-	log.Debugf("Decrypted: %s", decrypted)
+	msg.EncryptedPayload = false
+	msg.Payload = decrypted
+	log.Debugf("Decrypted: %x", decrypted)
+
 	return msg, nil
 }
 
