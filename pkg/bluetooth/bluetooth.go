@@ -226,7 +226,10 @@ func (b *Ble) writeMessage(msg *Message) {
 
 	b.WriteCmd(CmdRTS)
 	b.expectCommand(CmdCTS) // TODO figure out what to do if !CTS
-	bytes := msg.toByteArray()
+	bytes, err := msg.Marshal()
+	if err != nil {
+		log.Fatalf("could not marshal the message %s", err)
+	}
 	sum := crc32.ChecksumIEEE(bytes)
 	if len(bytes) <= 18 {
 		buf.WriteByte(index) // index
@@ -361,5 +364,5 @@ func (b *Ble) readMessage(cmd Packet) (*Message, error) {
 
 	b.WriteCmd(CmdSuccess)
 
-	return fromByteArray(bytes)
+	return Unmarshal(bytes)
 }

@@ -240,6 +240,7 @@ def decrypt(args):
     print("Encrypted: ", encrypted.hex(), len(encrypted))
     print("Digest: ", digest.hex(), len(digest))
 
+
 def encrypt(args):
     fields = [
         "packet_data",

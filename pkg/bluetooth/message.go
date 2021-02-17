@@ -2,6 +2,7 @@ package bluetooth
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
@@ -19,20 +20,22 @@ const (
 
 // Message is one CTwiPacket
 type Message struct {
-	Eqos           uint16
-	Ack            bool
-	Priority       bool
-	LastMessage    bool
-	Gateway        bool
-	Type           MessageType
-	Source         []byte
-	Destination    []byte
-	Payload        []byte
-	Sas            bool
-	Tfs            bool
-	SequenceNumber uint8
-	AckNumber      uint8
-	Version        uint16
+	Eqos             uint16
+	Ack              bool
+	Priority         bool
+	LastMessage      bool
+	Gateway          bool
+	Type             MessageType
+	EncryptedPayload bool
+	Source           []byte
+	Destination      []byte
+	Payload          []byte
+	Raw              []byte
+	Sas              bool
+	Tfs              bool
+	SequenceNumber   uint8
+	AckNumber        uint8
+	Version          uint16
 }
 
 type flag byte
@@ -65,8 +68,13 @@ func NewMessage(t MessageType, source, destination []byte) *Message {
 	return msg
 }
 
-func (m *Message) toByteArray() []byte {
+func (m *Message) Marshal() ([]byte, error) {
 	var buf bytes.Buffer
+
+	if m.Type == MessageTypeEncrypted && !m.EncryptedPayload {
+		return nil, errors.New("Message should be encrypted first")
+	}
+
 	f := new(flag)
 
 	buf.WriteString(MagicPattern)
@@ -108,11 +116,13 @@ func (m *Message) toByteArray() []byte {
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
-	return ret
+	return ret, nil
 }
 
-func fromByteArray(data []byte) (*Message, error) {
+func Unmarshal(data []byte) (*Message, error) {
 	ret := &Message{}
+	ret.Raw = data
+
 	if len(data) < 16 {
 		return nil, fmt.Errorf("Data %x is too short to parse as a Message", data)
 	}
@@ -150,6 +160,7 @@ func fromByteArray(data []byte) (*Message, error) {
 	ret.Destination = data[12:16]
 	if ret.Type == MessageTypeEncrypted {
 		ret.Payload = data[16 : 16+n+8]
+		ret.EncryptedPayload = true
 	} else {
 		ret.Payload = data[16 : 16+n]
 	}

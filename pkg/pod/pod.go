@@ -135,12 +135,10 @@ func (p *Pod) CommandLoop() {
 			continue
 		}
 		log.Debugf("got message: %s", spew.Sdump(msg))
-		cmd, err := encrypt.DecryptCommand(p.ck, p.noncePrefix, p.seq, msg)
+		_, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.seq, msg)
 		if err != nil {
-			log.Fatalf("could not decrypt command: %s", err)
+			log.Fatalf("could not decrypt message: %s", err)
 		}
-		log.Info("Received command: %s", string(cmd.Data))
-		log.Info("Received command(hex): %x", cmd.Data)
 		lastMsgSeq = msg.SequenceNumber
 	}
 }
