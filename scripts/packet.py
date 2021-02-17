@@ -203,7 +203,9 @@ def decrypt(args):
         "packet_data",
         "expected",
         "nonce",
-        "ck"
+        "ck",
+        "tag",
+        "header",
     ]
     if args.list_fields:
         print(fields)
@@ -212,21 +214,31 @@ def decrypt(args):
 
     print(f"Decrypt: CK: {data.ck.hex()}, Nonce: {data.nonce.hex()}, Data:{data.packet_data.hex()}")
 
-    actualData = data.packet_data[:-8]
+    actualData = data.packet_data
+    
     print(f"Actual data: {actualData.hex()} :: {len(actualData)}")
-    tag = data.packet_data[-8:]
+    print(f"Header: {data.header.hex()} :: {len(data.header)}")
+
+    tag = data.tag
     print(f"Tag: {tag.hex()} :: {len(tag)}")
 
-    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce)
+    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce, mac_len=8)
+    cipher.update(data.header)
     decrypted = cipher.decrypt(actualData)
-
+    
     try:    
         print("Verify: ", cipher.verify(tag))
+        print("VERIFIED!")
     except ValueError:
         print("NOPE")
     print("Decrypted: ", decrypted.hex(), len(decrypted))
     print("Expected:  ", data.expected.hex(), len(data.expected))
-
+    
+    cipher = AES.new(data.ck, AES.MODE_CCM, data.nonce, mac_len=8)
+    cipher.update(data.header)
+    encrypted, digest = cipher.encrypt_and_digest(decrypted)
+    print("Encrypted: ", encrypted.hex(), len(encrypted))
+    print("Digest: ", digest.hex(), len(digest))
 
 def encrypt(args):
     fields = [
