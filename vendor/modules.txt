@@ -39,6 +39,8 @@ github.com/pkg/errors
 # github.com/pschlump/AesCCM v0.0.0-20160925022350-c5df73b5834e
 ## explicit
 github.com/pschlump/AesCCM
+# github.com/pschlump/godebug v1.0.1
+## explicit
 # github.com/sirupsen/logrus v1.6.0
 ## explicit
 github.com/sirupsen/logrus

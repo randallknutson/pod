@@ -74,7 +74,7 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	}
 	if msg.Raw == nil {
 		_, err := msg.Marshal()
-		if err = nil {
+		if err == nil {
 			return nil, err
 		}
 	}
@@ -83,9 +83,9 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	toEncrypt := msg.Raw[16:]
 
 	encrypted := ccm.Seal(nil, nonce, toEncrypt, header)
-	msg.Raw = append(header, encrypted)
+	msg.Raw = append(header, encrypted...)
 	msg.EncryptedPayload = true
 	log.Debugf("Encrypted: %s", msg.Raw)
-	
+
 	return msg, nil
 }

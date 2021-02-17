@@ -70,9 +70,11 @@ func NewMessage(t MessageType, source, destination []byte) *Message {
 
 func (m *Message) Marshal() ([]byte, error) {
 	var buf bytes.Buffer
-
-	if m.Type == MessageTypeEncrypted && !m.EncryptedPayload {
-		return nil, errors.New("Message should be encrypted first")
+	if m.Type == MessageTypeEncrypted {
+		if !m.EncryptedPayload {
+			return nil, errors.New("Message should be encrypted first")
+		}
+		return m.Raw, nil
 	}
 
 	f := new(flag)
@@ -116,6 +118,8 @@ func (m *Message) Marshal() ([]byte, error) {
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
+	m.Raw = ret
+
 	return ret, nil
 }
 
