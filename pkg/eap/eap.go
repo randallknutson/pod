@@ -197,7 +197,7 @@ func (e *EapAkaChallenge) ParseChallenge(msg *message.Message) error {
 		return fmt.Errorf("error parsing eap message: %s", err)
 	}
 
-	log.Debugf("challenge: %s", spew.Sdump(eapChallenge))
+	log.Trace("challenge: %s", spew.Sdump(eapChallenge))
 	e.rand = eapChallenge.Attributes[AT_RAND].Data
 	e.autn = eapChallenge.Attributes[AT_AUTN].Data
 	e.pdmIV = eapChallenge.Attributes[AT_CUSTOM_IV].Data
@@ -250,8 +250,8 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*message.Message, error) 
 		return nil, err
 	}
 
-	log.Debugf("response: %s :: %d", spew.Sdump(eap), len(eap.Attributes))
-	log.Debugf("response payload: %x", ret.Payload)
+	log.Tracef("response: %s :: %d", spew.Sdump(eap), len(eap.Attributes))
+	log.Debugf("EapAka response payload: %x", ret.Payload)
 	log.Debugf("EapAka AUTN %x", e.autn)
 	log.Debugf("EapAka RES %x", e.res)
 	log.Debugf("EapAka CK %x", e.ck)

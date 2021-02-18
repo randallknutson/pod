@@ -12,6 +12,7 @@ require (
 	github.com/jacobsa/reqtrace v0.0.0-20150505043853-245c9e0234cb // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/paypal/gatt v0.0.0-20151011220935-4ae819d591cf
+	github.com/pelletier/go-toml v1.8.1
 	github.com/pschlump/AesCCM v0.0.0-20160925022350-c5df73b5834e
 	github.com/pschlump/godebug v1.0.1 // indirect
 	github.com/sirupsen/logrus v1.6.0

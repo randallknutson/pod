@@ -33,6 +33,10 @@ type Ble struct {
 
 	messageInput  chan *message.Message
 	messageOutput chan *message.Message
+
+	connectionStarted bool
+	stopLoop          chan bool
+	newConnCallback   func()
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -61,8 +65,13 @@ func New(adapterID string) (*Ble, error) {
 	}
 
 	d.Handle(
-		gatt.CentralConnected(func(c gatt.Central) { fmt.Println("connect: ", c.ID()) }),
-		gatt.CentralDisconnected(func(c gatt.Central) { fmt.Println("cisconnect: ", c.ID()) }),
+		gatt.CentralConnected(func(c gatt.Central) {
+			fmt.Println("connect: ", c.ID())
+			b.StopMessageLoop()
+		}),
+		gatt.CentralDisconnected(func(c gatt.Central) {
+			log.Fatalf("disconnect: %s", c.ID())
+		}),
 	)
 
 	// A mandatory handler for monitoring device state.
@@ -149,13 +158,24 @@ func New(adapterID string) (*Ble, error) {
 		default:
 		}
 	}
-	go b.loop()
 	d.Init(onStateChanged)
 	return b, nil
 }
 
-func (b *Ble) Close() {
+func (b *Ble) StartMessageLoop() {
+	if b.stopLoop != nil {
+		log.Fatalf("Messaging loop is already running")
+	}
+	b.stopLoop = make(chan bool)
+	go b.loop(b.stopLoop)
+}
 
+func (b *Ble) StopMessageLoop() {
+	// race condition, but this is called only on device disconnect
+	if b.stopLoop != nil {
+		close(b.stopLoop)
+		b.stopLoop = nil
+	}
 }
 
 func (b *Ble) WriteCmd(packet Packet) error {
@@ -199,9 +219,11 @@ func (b *Ble) WriteMessage(message *message.Message) {
 	b.messageOutput <- message
 }
 
-func (b *Ble) loop() {
+func (b *Ble) loop(stop chan bool) {
 	for {
 		select {
+		case <-stop:
+			return
 		case msg := <-b.messageOutput:
 			b.writeMessage(msg)
 		case cmd := <-b.cmdInput:

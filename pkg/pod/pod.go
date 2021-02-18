@@ -23,29 +23,46 @@ const (
 )
 
 type Pod struct {
-	ble *bluetooth.Ble
-	ltk []byte
-
-	id []byte // 4 byte
-
-	msgSeq      uint8  // TODO: is this the same as nonceSeq?
-	cmdSeq      uint8  // TODO: are all those 3 the same number ???
-	nonceSeq    uint64 // or 16?
-	noncePrefix []byte
-	ck          []byte
+	ble   *bluetooth.Ble
+	state *PODState
 }
 
-func New(ble *bluetooth.Ble) *Pod {
-	ret := &Pod{
-		ble: ble,
+func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
+	var err error
+
+	state := &PODState{
+		filename: stateFile,
 	}
+	if !freshState {
+		state, err = NewState(stateFile)
+		if err != nil {
+			log.Fatalf("could not restore pod state from %s: %+v", stateFile, err)
+		}
+	}
+
+	ret := &Pod{
+		ble:   ble,
+		state: state,
+	}
+
 	return ret
 }
 
-func (p *Pod) StartActivation() {
+func (p *Pod) StartAcceptingCommands() {
+	log.Infof("got a new connection, start accepting commands")
+	firstCmd, _ := p.ble.ReadCmd()
+	log.Infof("got first command: %s", firstCmd)
 
-	activationCmd, _ := p.ble.ReadCmd()
-	log.Infof("got activation command: %s", activationCmd)
+	p.ble.StartMessageLoop()
+
+	if p.state.LTK != nil { // paired, just establish new session
+		p.EapAka()
+	} else {
+		p.StartActivation() // not paired, get the LTK
+	}
+}
+
+func (p *Pod) StartActivation() {
 
 	pair := &pair.Pair{}
 	msg, _ := p.ble.ReadMessage()
@@ -90,18 +107,19 @@ func (p *Pod) StartActivation() {
 	}
 	p.ble.WriteMessage(msg)
 
-	p.ltk, err = pair.LTK()
+	p.state.LTK, err = pair.LTK()
 	if err != nil {
 		log.Fatalf("could not get LTK %s", err)
 	}
-	log.Infof("LTK %x", p.ltk)
+	log.Infof("LTK %x", p.state.LTK)
+	p.state.Save()
+
 	p.EapAka()
-	// here we reached Eap AKA!
 }
 
 func (p *Pod) EapAka() {
 
-	pair := eap.NewEapAkaChallenge(p.ltk)
+	pair := eap.NewEapAkaChallenge(p.state.LTK)
 
 	msg, _ := p.ble.ReadMessage()
 	err := pair.ParseChallenge(msg)
@@ -121,12 +139,15 @@ func (p *Pod) EapAka() {
 	if err != nil {
 		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
 	}
-	p.ck, p.noncePrefix = pair.CKNoncePrefix()
-	p.nonceSeq = 1
-	p.msgSeq = 1
-	log.Infof("got CK: %x", p.ck)
-	log.Infof("got Nonce: %x", p.noncePrefix)
-	log.Infof("using SEQ: %d", p.nonceSeq)
+	p.state.CK, p.state.NoncePrefix = pair.CKNoncePrefix()
+
+	p.state.NonceSeq = 1
+	p.state.MsgSeq = 1
+
+	log.Infof("got CK: %x", p.state.CK)
+	log.Infof("got Nonce: %x", p.state.NoncePrefix)
+	log.Infof("using SEQ: %d", p.state.NonceSeq)
+	p.state.Save()
 
 	p.CommandLoop()
 	// ??? Start encryption ???
@@ -144,11 +165,11 @@ func (p *Pod) CommandLoop() {
 		lastMsgSeq = msg.SequenceNumber
 
 		log.Tracef("got command message: %s", spew.Sdump(msg))
-		decrypted, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
+		decrypted, err := encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
 			log.Fatalf("could not decrypt message: %s", err)
 		}
-		p.nonceSeq++
+		p.state.NonceSeq++
 
 		cmd, err := command.Unmarshal(decrypted.Payload)
 		if err != nil {
@@ -158,19 +179,20 @@ func (p *Pod) CommandLoop() {
 		if err != nil {
 			log.Fatalf("could not get command header data", err)
 		}
-		p.cmdSeq = cmdSeq
+		p.state.CmdSeq = cmdSeq
 		rsp, err := cmd.GetResponse()
 		if err != nil {
 			log.Fatalf("could not get command response: %s", err)
 		}
 
-		p.msgSeq++
-		p.cmdSeq++
+		p.state.MsgSeq++
+		p.state.CmdSeq++
+		p.state.Save()
 		responseMetadata := &response.ResponseMetadata{
 			Dst:       msg.Source,
 			Src:       msg.Destination,
-			CmdSeq:    p.cmdSeq,
-			MsgSeq:    p.msgSeq,
+			CmdSeq:    p.state.CmdSeq,
+			MsgSeq:    p.state.MsgSeq,
 			RequestID: requestID,
 			AckSeq:    msg.SequenceNumber + 1,
 		}
@@ -178,25 +200,27 @@ func (p *Pod) CommandLoop() {
 		if err != nil {
 			log.Fatalf("could not marshal command response: %s", err)
 		}
-		msg, err = encrypt.EncryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
+		msg, err = encrypt.EncryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
 			log.Fatalf("could not encrypt response: %s", err)
 		}
-		p.nonceSeq++
+		p.state.NonceSeq++
+		p.state.Save()
 
 		p.ble.WriteMessage(msg)
 		log.Tracef("sending response: %s", spew.Sdump(msg))
 
-		log.Trace("reading response ACK. Nonce seq %d", p.nonceSeq)
+		log.Trace("reading response ACK. Nonce seq %d", p.state.NonceSeq)
 		msg, _ = p.ble.ReadMessage()
 		// TODO check for SEQ numbers here and the Ack flag
-		decrypted, err = encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
+		decrypted, err = encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
 			log.Fatalf("could not decrypt message: %s", err)
 		}
-		p.nonceSeq++
+		p.state.NonceSeq++
 		if len(decrypted.Payload) != 0 {
 			log.Fatalf("this should be empty message with ACK header %s", spew.Sdump(msg))
 		}
+		p.state.Save()
 	}
 }
