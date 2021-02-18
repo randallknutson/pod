@@ -4,6 +4,8 @@ import (
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
+	"github.com/avereha/pod/pkg/pair"
+
 	"github.com/avereha/pod/pkg/encrypt"
 	"github.com/avereha/pod/pkg/response"
 
@@ -45,7 +47,7 @@ func (p *Pod) StartActivation() {
 	activationCmd, _ := p.ble.ReadCmd()
 	log.Infof("Got activation command: %s", activationCmd)
 
-	pair := &Pair{}
+	pair := &pair.Pair{}
 	msg, _ := p.ble.ReadMessage()
 	if err := pair.ParseSP1SP2(msg); err != nil {
 		log.Fatalf("Error parsing SP1SP2 %s", err)
@@ -76,9 +78,9 @@ func (p *Pod) StartActivation() {
 
 	// receive SP0GP0 constant from PDM
 	msg, _ = p.ble.ReadMessage()
-	if string(msg.Payload) != sp0gp0 {
-		log.Debugf("Message :%s", spew.Sdump(msg))
-		log.Fatalf("Expected SP0GP0, got %x", msg.Payload)
+	err = pair.ParseSP0GP0(msg)
+	if err != nil {
+		log.Fatalf("could not parse SP0GP0: %w", err)
 	}
 
 	// send P0 constant
