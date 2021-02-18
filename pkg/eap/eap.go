@@ -250,8 +250,8 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*message.Message, error) 
 		return nil, err
 	}
 
-	log.Debugf("Response: %s :: %d", spew.Sdump(eap), len(eap.Attributes))
-	log.Debugf("Response payload: %x", ret.Payload)
+	log.Debugf("response: %s :: %d", spew.Sdump(eap), len(eap.Attributes))
+	log.Debugf("response payload: %x", ret.Payload)
 	log.Debugf("EapAka AUTN %x", e.autn)
 	log.Debugf("EapAka RES %x", e.res)
 	log.Debugf("EapAka CK %x", e.ck)

@@ -45,17 +45,17 @@ func New(ble *bluetooth.Ble) *Pod {
 func (p *Pod) StartActivation() {
 
 	activationCmd, _ := p.ble.ReadCmd()
-	log.Infof("Got activation command: %s", activationCmd)
+	log.Infof("got activation command: %s", activationCmd)
 
 	pair := &pair.Pair{}
 	msg, _ := p.ble.ReadMessage()
 	if err := pair.ParseSP1SP2(msg); err != nil {
-		log.Fatalf("Error parsing SP1SP2 %s", err)
+		log.Fatalf("error parsing SP1SP2 %s", err)
 	}
 	// read PDM public key and nonce
 	msg, _ = p.ble.ReadMessage()
 	if err := pair.ParseSPS1(msg); err != nil {
-		log.Fatalf("Error parsing SPS1 %s", err)
+		log.Fatalf("error parsing SPS1 %s", err)
 	}
 
 	msg, err := pair.GenerateSPS1()
@@ -116,7 +116,7 @@ func (p *Pod) EapAka() {
 	p.ble.WriteMessage(msg)
 
 	msg, _ = p.ble.ReadMessage()
-	log.Debugf("Success? %x", msg.Payload)
+	log.Debugf("success? %x", msg.Payload)
 	err = pair.ParseSuccess(msg)
 	if err != nil {
 		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
@@ -124,9 +124,9 @@ func (p *Pod) EapAka() {
 	p.ck, p.noncePrefix = pair.CKNoncePrefix()
 	p.nonceSeq = 1
 	p.msgSeq = 1
-	log.Infof("Got CK: %x", p.ck)
-	log.Infof("Got Nonce: %x", p.noncePrefix)
-	log.Infof("Using SEQ: %d", p.nonceSeq)
+	log.Infof("got CK: %x", p.ck)
+	log.Infof("got Nonce: %x", p.noncePrefix)
+	log.Infof("using SEQ: %d", p.nonceSeq)
 
 	p.CommandLoop()
 	// ??? Start encryption ???
@@ -185,9 +185,9 @@ func (p *Pod) CommandLoop() {
 		p.nonceSeq++
 
 		p.ble.WriteMessage(msg)
-		log.Tracef("Sending response: %s", spew.Sdump(msg))
+		log.Tracef("sending response: %s", spew.Sdump(msg))
 
-		log.Trace("Reading response ACK. Nonce seq %d", p.nonceSeq)
+		log.Trace("reading response ACK. Nonce seq %d", p.nonceSeq)
 		msg, _ = p.ble.ReadMessage()
 		// TODO check for SEQ numbers here and the Ack flag
 		decrypted, err = encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)

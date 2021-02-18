@@ -44,9 +44,9 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *message.Message) (*
 	tag := msg.Payload[n-8:]
 	encryptedData := msg.Payload[:n-8]
 
-	log.Tracef("MAC: %x :: %d", tag, len(tag))
-	log.Tracef("Data: %x :: %d", encryptedData, len(encryptedData))
-	log.Tracef("Header: %x :: %d", header, len(header))
+	log.Tracef("tag: %x :: %d", tag, len(tag))
+	log.Tracef("data: %x :: %d", encryptedData, len(encryptedData))
+	log.Tracef("header: %x :: %d", header, len(header))
 
 	decrypted, err := ccm.Open([]byte{}, nonce, msg.Payload, header)
 	if err != nil {

@@ -124,10 +124,10 @@ func Unmarshal(data []byte) (*Message, error) {
 	ret.Raw = data
 
 	if len(data) < 16 {
-		return nil, fmt.Errorf("Data %x is too short to parse as a Message", data)
+		return nil, fmt.Errorf("data %x is too short to parse as a Message", data)
 	}
 	if string(data[:2]) != MagicPattern {
-		return nil, fmt.Errorf("Magic pattern not found in %x", data)
+		return nil, fmt.Errorf("magic pattern not found in %x", data)
 	}
 
 	f := flag(data[2])
@@ -144,7 +144,7 @@ func Unmarshal(data []byte) (*Message, error) {
 	ret.Type = MessageType(f.get(7) | f.get(6)<<1 | f.get(5)<<2 | f.get(4)<<3)
 
 	if ret.Type > MessageTypePairing {
-		return nil, fmt.Errorf("Invalid message type found in %x", data)
+		return nil, fmt.Errorf("invalid message type found in %x", data)
 	}
 	if ret.Version != 0 {
 		return nil, fmt.Errorf("invalid version received in %x", data)

@@ -57,17 +57,17 @@ func New(adapterID string) (*Ble, error) {
 
 	d, err := gatt.NewDevice(DefaultServerOptions...)
 	if err != nil {
-		log.Fatalf("Failed to open device, err: %s", err)
+		log.Fatalf("failed to open device, err: %s", err)
 	}
 
 	d.Handle(
-		gatt.CentralConnected(func(c gatt.Central) { fmt.Println("Connect: ", c.ID()) }),
-		gatt.CentralDisconnected(func(c gatt.Central) { fmt.Println("Disconnect: ", c.ID()) }),
+		gatt.CentralConnected(func(c gatt.Central) { fmt.Println("connect: ", c.ID()) }),
+		gatt.CentralDisconnected(func(c gatt.Central) { fmt.Println("cisconnect: ", c.ID()) }),
 	)
 
 	// A mandatory handler for monitoring device state.
 	onStateChanged := func(d gatt.Device, s gatt.State) {
-		fmt.Printf("State: %s\n", s)
+		fmt.Printf("state: %s\n", s)
 		switch s {
 		case gatt.StatePoweredOn:
 			var serviceUUID = gatt.MustParseUUID("1a7e-4024-e3ed-4464-8b7e-751e03d0dc5f")
@@ -79,7 +79,7 @@ func New(adapterID string) (*Ble, error) {
 			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("Received CMD:  %x", data)
+					log.Tracef("received CMD:  %x", data)
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.cmdInput <- Packet(ret)
@@ -88,7 +88,7 @@ func New(adapterID string) (*Ble, error) {
 
 			cmdCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("Enabled notifications for CMD: %s", r.Central.ID())
+					log.Infof("enabled notifications for CMD: %s", r.Central.ID())
 					go func() {
 						for {
 							if n.Done() {
@@ -98,7 +98,7 @@ func New(adapterID string) (*Ble, error) {
 							ret, err := n.Write(packet)
 							log.Tracef("CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
-								log.Fatalf("Error writing CMD: %s", err)
+								log.Fatalf("error writing CMD: %s", err)
 							}
 						}
 					}()
@@ -107,7 +107,7 @@ func New(adapterID string) (*Ble, error) {
 			dataCharacteristic := s.AddCharacteristic(dataCharUUID)
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("Enabled notifications for DATA: %s", r.Central.ID())
+					log.Infof("enabled notifications for DATA: %s", r.Central.ID())
 					go func() {
 						for {
 							if n.Done() {
@@ -117,7 +117,7 @@ func New(adapterID string) (*Ble, error) {
 							ret, err := n.Write(packet)
 							log.Tracef("DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
-								log.Fatalf("Error writing DATA: %s ", err)
+								log.Fatalf("error writing DATA: %s ", err)
 							}
 						}
 					}()
@@ -125,7 +125,7 @@ func New(adapterID string) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("Received DATA %x", data)
+					log.Tracef("received DATA %x", data)
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)
@@ -207,7 +207,7 @@ func (b *Ble) loop() {
 		case cmd := <-b.cmdInput:
 			msg, err := b.readMessage(cmd)
 			if err != nil {
-				log.Fatalf("Error reading message: %s", err)
+				log.Fatalf("error reading message: %s", err)
 			}
 			b.messageInput <- msg
 		}
@@ -217,7 +217,7 @@ func (b *Ble) loop() {
 func (b *Ble) expectCommand(expected Packet) {
 	cmd, _ := b.ReadCmd()
 	if bytes.Compare(expected, cmd) != 0 {
-		log.Fatalf("Expected command: %s. Received command: %s", expected, cmd)
+		log.Fatalf("expected command: %s. received command: %s", expected, cmd)
 	}
 }
 
@@ -306,7 +306,7 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var checksum []byte
 
 	if bytes.Compare(cmd, CmdRTS) != 0 {
-		log.Fatalf("Expected: %s. Received: %s", CmdRTS, cmd)
+		log.Fatalf("expected RTS: %s. received: %s", CmdRTS, cmd)
 	}
 	b.WriteCmd(CmdCTS)
 
@@ -331,7 +331,7 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 		if i == expectedIndex {
 			buf.Write(data[1:20])
 		} else {
-			log.Warnf("Sending NACK, packet index is wrong")
+			log.Warnf("sending NACK, packet index is wrong")
 			buf.Write(data[:])
 			CmdNACK[1] = byte(expectedIndex)
 			b.WriteCmd(CmdNACK)
@@ -356,11 +356,11 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	bytes := buf.Bytes()
 	sum := crc32.ChecksumIEEE(bytes)
 	if binary.BigEndian.Uint32(checksum) != sum {
-		log.Warnf("Checksum missmatch. checksum is: %x. want: %d", sum, checksum)
-		log.Warnf("Data: %s", hex.EncodeToString(bytes))
+		log.Warnf("checksum missmatch. checksum is: %x. want: %d", sum, checksum)
+		log.Warnf("data: %s", hex.EncodeToString(bytes))
 
 		b.WriteCmd(CmdFail)
-		return nil, errors.New("Checksum missmatch")
+		return nil, errors.New("checksum missmatch")
 	}
 
 	b.WriteCmd(CmdSuccess)
