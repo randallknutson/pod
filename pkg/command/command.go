@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/avereha/pod/pkg/response"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,7 +27,8 @@ const (
 
 type Command interface {
 	GetResponse() (response.Response, error)
-	SetHeaderData(uint16, []byte) error
+	SetHeaderData(uint8, []byte) error
+	GetHeaderData() (cmdSeq uint8, requestID []byte, err error)
 }
 
 type CommandReader struct {
@@ -60,7 +62,7 @@ func Unmarshal(data []byte) (Command, error) {
 	id := data[:4]
 	var lsf uint16 = uint16(data[4])<<8 | uint16(data[5])
 	length := int(lsf & 1023)
-	seq := (lsf >> 10) & 15
+	seq := uint8((lsf >> 10) & 0x0F)
 	if length+6+2 != n {
 		return nil, fmt.Errorf("invalid command length %d :: %d. %x", n, length+6+2, data)
 	}
@@ -76,6 +78,7 @@ func Unmarshal(data []byte) (Command, error) {
 		if err != nil {
 			return nil, err
 		}
+
 	default:
 		ret, err = UnmarshalNack(data)
 		if err != nil {

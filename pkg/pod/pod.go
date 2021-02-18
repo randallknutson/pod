@@ -5,6 +5,7 @@ import (
 	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
 	"github.com/avereha/pod/pkg/encrypt"
+	"github.com/avereha/pod/pkg/response"
 
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
@@ -20,12 +21,14 @@ const (
 )
 
 type Pod struct {
-	ble   *bluetooth.Ble
-	ltk   []byte
-	id    []byte // 4 byte
-	nonce []byte
-	seq   uint64 // or 16?
+	ble *bluetooth.Ble
+	ltk []byte
 
+	id []byte // 4 byte
+
+	msgSeq      uint8  // TODO: is this the same as nonceSeq?
+	cmdSeq      uint8  // TODO: are all those 3 the same number ???
+	nonceSeq    uint64 // or 16?
 	noncePrefix []byte
 	ck          []byte
 }
@@ -117,10 +120,11 @@ func (p *Pod) EapAka() {
 		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
 	}
 	p.ck, p.noncePrefix = pair.CKNoncePrefix()
-	p.seq = 1
+	p.nonceSeq = 1
+	p.msgSeq = 1
 	log.Infof("Got CK: %x", p.ck)
 	log.Infof("Got Nonce: %x", p.noncePrefix)
-	log.Infof("Using SEQ: %d", p.seq)
+	log.Infof("Using SEQ: %d", p.nonceSeq)
 
 	p.CommandLoop()
 	// ??? Start encryption ???
@@ -135,27 +139,63 @@ func (p *Pod) CommandLoop() {
 			// ignore duplicate commands/mesages
 			continue
 		}
-		log.Debugf("got message: %s", spew.Sdump(msg))
-		decrypted, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.seq, msg)
+		lastMsgSeq = msg.SequenceNumber
+
+		log.Tracef("got command message: %s", spew.Sdump(msg))
+		decrypted, err := encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
 		if err != nil {
 			log.Fatalf("could not decrypt message: %s", err)
 		}
+		p.nonceSeq++
+
 		cmd, err := command.Unmarshal(decrypted.Payload)
 		if err != nil {
 			log.Fatalf("could not unmarshal command: %s", err)
 		}
 		log.Infof("Got command: %+v", cmd)
-		response, err := cmd.GetResponse()
+		cmdSeq, requestID, err := cmd.GetHeaderData()
+		if err != nil {
+			log.Fatalf("could not get command header data", err)
+		}
+		p.cmdSeq = cmdSeq
+		rsp, err := cmd.GetResponse()
 		if err != nil {
 			log.Fatalf("could not get command response: %s", err)
 		}
-		msg, err = response.Marshal()
+
+		p.msgSeq++
+		p.cmdSeq++
+		responseMetadata := &response.ResponseMetadata{
+			Dst:       msg.Source,
+			Src:       msg.Destination,
+			CmdSeq:    p.cmdSeq,
+			MsgSeq:    p.msgSeq,
+			RequestID: requestID,
+			AckSeq:    msg.SequenceNumber + 1,
+		}
+		msg, err = response.Marshal(rsp, responseMetadata)
 		if err != nil {
 			log.Fatalf("could not marshal command response: %s", err)
 		}
-		p.seq++
-		encrypt.EncryptMessage(p.ck, p.noncePrefix, p.seq, msg)
+		msg, err = encrypt.EncryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
+		if err != nil {
+			log.Fatalf("could not encrypt response: %s", err)
+		}
+		p.nonceSeq++
+
 		p.ble.WriteMessage(msg)
-		lastMsgSeq = msg.SequenceNumber
+		log.Tracef("Sending response: %s", spew.Sdump(msg))
+
+		log.Debugf("Reading response ACK. Nonce seq %d", p.nonceSeq)
+		msg, _ = p.ble.ReadMessage()
+		// TODO check for SEQ numbers here and the Ack flag
+		decrypted, err = encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
+		if err != nil {
+			log.Fatalf("could not decrypt message: %s", err)
+		}
+		p.nonceSeq++
+		if len(decrypted.Payload) != 0 {
+			log.Fatalf("this should be empty message with ACK header %s", spew.Sdump(msg))
+		}
 	}
 }

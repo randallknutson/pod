@@ -2,7 +2,6 @@ package bluetooth
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
@@ -70,10 +69,7 @@ func NewMessage(t MessageType, source, destination []byte) *Message {
 
 func (m *Message) Marshal() ([]byte, error) {
 	var buf bytes.Buffer
-	if m.Type == MessageTypeEncrypted {
-		if !m.EncryptedPayload {
-			return nil, errors.New("Message should be encrypted first")
-		}
+	if m.Type == MessageTypeEncrypted && m.EncryptedPayload { // Already encrypted
 		return m.Raw, nil
 	}
 

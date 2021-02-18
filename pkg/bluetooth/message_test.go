@@ -20,7 +20,7 @@ func Test_PrintfromByteArray(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		msg, err := fromByteArray(in)
+		msg, err := Unmarshal(in)
 		if err != nil {
 			t.Error(err)
 		}

@@ -7,13 +7,13 @@ import (
 )
 
 type GetVersion struct {
-	Seq        uint16
+	Seq        uint8
 	ID         []byte
 	TheOtherID []byte
 }
 
 func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
-	if data[0] != 0 {
+	if data[0] != 4 {
 		return nil, fmt.Errorf("invalid length when unmarshaling GetVersion %d :: %x", data[0], data)
 	}
 	ret := &GetVersion{}
@@ -24,12 +24,15 @@ func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
 
 func (g *GetVersion) GetResponse() (response.Response, error) {
 	// TODO improve responses
-
-	return nil, nil
+	return &response.VersionResponse{}, nil
 }
 
-func (g *GetVersion) SetHeaderData(seq uint16, id []byte) error {
+func (g *GetVersion) SetHeaderData(seq uint8, id []byte) error {
 	g.ID = id
 	g.Seq = seq
 	return nil
+}
+
+func (g *GetVersion) GetHeaderData() (uint8, []byte, error) {
+	return g.Seq, g.ID, nil
 }

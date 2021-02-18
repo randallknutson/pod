@@ -8,10 +8,9 @@ import (
 	"golang.org/x/crypto/curve25519"
 
 	"github.com/avereha/pod/pkg/bluetooth"
+
 	"github.com/davecgh/go-spew/spew"
-
 	"github.com/jacobsa/crypto/cmac"
-
 	log "github.com/sirupsen/logrus"
 )
 

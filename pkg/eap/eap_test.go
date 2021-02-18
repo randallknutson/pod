@@ -27,13 +27,13 @@ func TestEapAka_MarshalUnmarshal(t *testing.T) {
 				Code:    CodeRequest,
 				SubType: SubTypeAkaChallenge,
 				Attributes: map[AttributeType]*Attribute{
-					AT_RAND: &Attribute{
+					AT_RAND: {
 						Data: make([]byte, 16),
 					},
-					AT_CUSTOM_IV: &Attribute{
+					AT_CUSTOM_IV: {
 						Data: make([]byte, 4),
 					},
-					AT_AUTN: &Attribute{
+					AT_AUTN: {
 						Data: make([]byte, 16),
 					},
 				},
@@ -45,10 +45,10 @@ func TestEapAka_MarshalUnmarshal(t *testing.T) {
 				Code:    CodeResponse,
 				SubType: SubTypeAkaChallenge,
 				Attributes: map[AttributeType]*Attribute{
-					AT_RES: &Attribute{
+					AT_RES: {
 						Data: make([]byte, 8),
 					},
-					AT_CUSTOM_IV: &Attribute{
+					AT_CUSTOM_IV: {
 						Data: make([]byte, 4),
 					},
 				},

@@ -62,8 +62,12 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 }
 
 func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) (*bluetooth.Message, error) {
+	if msg.EncryptedPayload {
+		return msg, nil
+	}
+
 	log.Debugf("Using CK:    %x", ck)
-	nonce := buildNonce(noncePrefix, seq, true)
+	nonce := buildNonce(noncePrefix, seq, false)
 	log.Debugf("Using Nonce: %x :: %d", nonce, len(nonce))
 	aes, err := aes.NewCipher(ck)
 	if err != nil {
@@ -74,8 +78,7 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 		return nil, fmt.Errorf("could not create aes-ccm: %w", err)
 	}
 	if msg.Raw == nil {
-		_, err := msg.Marshal()
-		if err == nil {
+		if _, err := msg.Marshal(); err != nil {
 			return nil, err
 		}
 	}
@@ -86,7 +89,7 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	encrypted := ccm.Seal(nil, nonce, toEncrypt, header)
 	msg.Raw = append(header, encrypted...)
 	msg.EncryptedPayload = true
-	log.Debugf("Encrypted: %s", msg.Raw)
+	log.Debugf("Encrypted: %x", msg.Raw)
 
 	return msg, nil
 }

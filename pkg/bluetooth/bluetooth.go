@@ -216,7 +216,7 @@ func (b *Ble) loop() {
 func (b *Ble) expectCommand(expected Packet) {
 	cmd, _ := b.ReadCmd()
 	if bytes.Compare(expected, cmd) != 0 {
-		log.Fatalf("Expected: %s. Received: %s", expected, cmd)
+		log.Fatalf("Expected command: %s. Received command: %s", expected, cmd)
 	}
 }
 
