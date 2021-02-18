@@ -75,15 +75,15 @@ func Unmarshal(data []byte) (Command, error) {
 	switch t {
 	case GET_VERSION:
 		ret, err = UnmarshalGetVersion(data)
-		if err != nil {
-			return nil, err
-		}
-
+	case SET_UNIQUE_ID:
+		ret, err = UnmarshalSetUniqueID(data)
+	case PROGRAM_ALERTS, PROGRAM_BASAL, PROGRAM_INSULIN, GET_STATUS:
+		ret, err = UnmarshalProgramAlerts(data)
 	default:
 		ret, err = UnmarshalNack(data)
-		if err != nil {
-			return nil, err
-		}
+	}
+	if err != nil {
+		return nil, err
 	}
 	if err := ret.SetHeaderData(seq, id); err != nil {
 		return nil, err

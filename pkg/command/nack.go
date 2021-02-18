@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/avereha/pod/pkg/response"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ func UnmarshalNack(data []byte) (*Nack, error) {
 }
 
 func (g *Nack) GetResponse() (response.Response, error) {
-	return nil, nil
+	return &response.NackResponse{}, nil
 }
 
 func (g *Nack) SetHeaderData(seq uint8, id []byte) error {
