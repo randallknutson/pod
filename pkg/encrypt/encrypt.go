@@ -4,8 +4,7 @@ import (
 	"crypto/aes"
 	"fmt"
 
-	"github.com/avereha/pod/pkg/bluetooth"
-
+	"github.com/avereha/pod/pkg/message"
 	aesccm "github.com/pschlump/AesCCM"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,7 +26,7 @@ func buildNonce(noncePrefix []byte, seq uint64, podReceiving bool) []byte {
 	return append(noncePrefix, seqBytes...)
 }
 
-func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) (*bluetooth.Message, error) {
+func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *message.Message) (*message.Message, error) {
 	log.Tracef("using CK:    %x", ck)
 	nonce := buildNonce(noncePrefix, seq, true)
 	log.Tracef("decrypt: using nonce: %x :: %d", nonce, len(nonce))
@@ -60,7 +59,7 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	return msg, nil
 }
 
-func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) (*bluetooth.Message, error) {
+func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *message.Message) (*message.Message, error) {
 	if msg.EncryptedPayload {
 		return msg, nil
 	}

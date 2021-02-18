@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
+	"github.com/avereha/pod/pkg/message"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
@@ -30,8 +31,8 @@ type Ble struct {
 	dataOutput chan Packet
 	cmdOutput  chan Packet
 
-	messageInput  chan *Message
-	messageOutput chan *Message
+	messageInput  chan *message.Message
+	messageOutput chan *message.Message
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -50,8 +51,8 @@ func New(adapterID string) (*Ble, error) {
 		cmdInput:      make(chan Packet, 5),
 		dataOutput:    make(chan Packet, 5),
 		cmdOutput:     make(chan Packet, 5),
-		messageInput:  make(chan *Message, 5),
-		messageOutput: make(chan *Message, 2),
+		messageInput:  make(chan *message.Message, 5),
+		messageOutput: make(chan *message.Message, 2),
 	}
 
 	d, err := gatt.NewDevice(DefaultServerOptions...)
@@ -189,12 +190,12 @@ func (p Packet) String() string {
 	return hex.EncodeToString(p)
 }
 
-func (b *Ble) ReadMessage() (*Message, error) {
+func (b *Ble) ReadMessage() (*message.Message, error) {
 	message := <-b.messageInput
 	return message, nil
 }
 
-func (b *Ble) WriteMessage(message *Message) {
+func (b *Ble) WriteMessage(message *message.Message) {
 	b.messageOutput <- message
 }
 
@@ -220,7 +221,7 @@ func (b *Ble) expectCommand(expected Packet) {
 	}
 }
 
-func (b *Ble) writeMessage(msg *Message) {
+func (b *Ble) writeMessage(msg *message.Message) {
 	var buf bytes.Buffer
 	var index byte = 0
 
@@ -300,7 +301,7 @@ func (b *Ble) writeMessage(msg *Message) {
 	b.expectCommand(CmdSuccess)
 }
 
-func (b *Ble) readMessage(cmd Packet) (*Message, error) {
+func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
 
@@ -364,5 +365,5 @@ func (b *Ble) readMessage(cmd Packet) (*Message, error) {
 
 	b.WriteCmd(CmdSuccess)
 
-	return Unmarshal(bytes)
+	return message.Unmarshal(bytes)
 }

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/curve25519"
 
-	"github.com/avereha/pod/pkg/bluetooth"
+	"github.com/avereha/pod/pkg/message"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jacobsa/crypto/cmac"
@@ -71,7 +71,7 @@ func buildStringByte(names []string, values map[string][]byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Pair) ParseSP1SP2(msg *bluetooth.Message) error {
+func (c *Pair) ParseSP1SP2(msg *message.Message) error {
 	sp, err := parseStringByte([]string{sp1, sp2}, msg.Payload)
 	if err != nil {
 		log.Debugf("Message :%s", spew.Sdump(msg))
@@ -84,7 +84,7 @@ func (c *Pair) ParseSP1SP2(msg *bluetooth.Message) error {
 	return nil
 }
 
-func (c *Pair) ParseSPS1(msg *bluetooth.Message) error {
+func (c *Pair) ParseSPS1(msg *message.Message) error {
 	sp, err := parseStringByte([]string{sps1}, msg.Payload)
 	if err != nil {
 		log.Debugf("Message :%s", spew.Sdump(msg))
@@ -109,7 +109,7 @@ func (c *Pair) ParseSPS1(msg *bluetooth.Message) error {
 	return nil
 }
 
-func (c *Pair) GenerateSPS1() (*bluetooth.Message, error) {
+func (c *Pair) GenerateSPS1() (*message.Message, error) {
 	var err error
 	var buf bytes.Buffer
 
@@ -119,7 +119,7 @@ func (c *Pair) GenerateSPS1() (*bluetooth.Message, error) {
 	sp := make(map[string][]byte)
 	sp[sps1] = buf.Bytes()
 
-	msg := bluetooth.NewMessage(bluetooth.MessageTypePairing, c.podID, c.pdmID)
+	msg := message.NewMessage(message.MessageTypePairing, c.podID, c.pdmID)
 	msg.Payload, err = buildStringByte([]string{sps1}, sp)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (c *Pair) GenerateSPS1() (*bluetooth.Message, error) {
 	return msg, nil
 }
 
-func (c *Pair) ParseSPS2(msg *bluetooth.Message) error {
+func (c *Pair) ParseSPS2(msg *message.Message) error {
 	sp, err := parseStringByte([]string{sps2}, msg.Payload)
 	if err != nil {
 		log.Debugf("Message :%s", spew.Sdump(msg))
@@ -148,12 +148,12 @@ func (c *Pair) ParseSPS2(msg *bluetooth.Message) error {
 	return nil
 }
 
-func (c *Pair) GenerateSPS2() (*bluetooth.Message, error) {
+func (c *Pair) GenerateSPS2() (*message.Message, error) {
 	var err error
 	sp := make(map[string][]byte)
 	sp[sps2] = c.podConf
 
-	msg := bluetooth.NewMessage(bluetooth.MessageTypePairing, c.podID, c.pdmID)
+	msg := message.NewMessage(message.MessageTypePairing, c.podID, c.pdmID)
 	msg.Payload, err = buildStringByte([]string{sps2}, sp)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (c *Pair) GenerateSPS2() (*bluetooth.Message, error) {
 	return msg, nil
 }
 
-func (c *Pair) ParseSP0GP0(msg *bluetooth.Message) error {
+func (c *Pair) ParseSP0GP0(msg *message.Message) error {
 	if string(msg.Payload) != sp0gp0 {
 		log.Debugf("Message :%s", spew.Sdump(msg))
 		return fmt.Errorf("Expected SP0GP0, got %x", msg.Payload)
@@ -171,9 +171,9 @@ func (c *Pair) ParseSP0GP0(msg *bluetooth.Message) error {
 	return nil
 }
 
-func (c *Pair) GenerateP0() (*bluetooth.Message, error) {
+func (c *Pair) GenerateP0() (*message.Message, error) {
 	var err error
-	msg := bluetooth.NewMessage(bluetooth.MessageTypePairing, c.podID, c.pdmID)
+	msg := message.NewMessage(message.MessageTypePairing, c.podID, c.pdmID)
 	sp := make(map[string][]byte)
 	sp[p0] = []byte{0xa5} // magic constant ???
 	msg.Payload, err = buildStringByte([]string{p0}, sp)

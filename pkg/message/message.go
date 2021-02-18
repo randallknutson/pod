@@ -1,4 +1,4 @@
-package bluetooth
+package message
 
 import (
 	"bytes"

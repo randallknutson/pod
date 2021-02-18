@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/crc"
+	"github.com/avereha/pod/pkg/message"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -52,7 +52,7 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	return buf.Bytes(), nil
 }
 
-func Marshal(rsp Response, metadata *ResponseMetadata) (*bluetooth.Message, error) {
+func Marshal(rsp Response, metadata *ResponseMetadata) (*message.Message, error) {
 	var buf bytes.Buffer
 
 	payload, err := payloadWithHeaderAndCRC(rsp, metadata.CmdSeq, metadata.RequestID)
@@ -66,7 +66,7 @@ func Marshal(rsp Response, metadata *ResponseMetadata) (*bluetooth.Message, erro
 	buf.WriteByte(byte(totalLen))
 	buf.Write(payload)
 
-	msg := bluetooth.NewMessage(bluetooth.MessageTypeEncrypted, metadata.Src, metadata.Dst)
+	msg := message.NewMessage(message.MessageTypeEncrypted, metadata.Src, metadata.Dst)
 	msg.Payload = buf.Bytes()
 	msg.SequenceNumber = metadata.MsgSeq
 	msg.Ack = true

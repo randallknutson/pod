@@ -5,7 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/avereha/pod/pkg/bluetooth"
+	"github.com/avereha/pod/pkg/message"
+
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 	"github.com/wmnsk/milenage"
@@ -188,7 +189,7 @@ func NewEapAkaChallenge(k []byte) *EapAkaChallenge {
 	}
 }
 
-func (e *EapAkaChallenge) ParseChallenge(msg *bluetooth.Message) error {
+func (e *EapAkaChallenge) ParseChallenge(msg *message.Message) error {
 	e.pdmID = msg.Source
 	e.podID = msg.Destination
 	eapChallenge, err := Unmarshal(msg.Payload)
@@ -215,9 +216,9 @@ func (e *EapAkaChallenge) CKNoncePrefix() ([]byte, []byte) {
 	return e.ck, nonce
 }
 
-func (e *EapAkaChallenge) GenerateChallengeResponse() (*bluetooth.Message, error) {
+func (e *EapAkaChallenge) GenerateChallengeResponse() (*message.Message, error) {
 	var err error
-	ret := bluetooth.NewMessage(bluetooth.MessageTypeSessionEstablishment, e.podID, e.pdmID)
+	ret := message.NewMessage(message.MessageTypeSessionEstablishment, e.podID, e.pdmID)
 	mil := milenage.New(
 		e.k,
 		e.op,
@@ -261,7 +262,7 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*bluetooth.Message, error
 	return ret, nil
 }
 
-func (e *EapAkaChallenge) ParseSuccess(msg *bluetooth.Message) error {
+func (e *EapAkaChallenge) ParseSuccess(msg *message.Message) error {
 	eap, err := Unmarshal(msg.Payload)
 	if err != nil {
 		return fmt.Errorf("error parsing eap message: %s", err)
