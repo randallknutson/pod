@@ -25,6 +25,23 @@ const (
 	STOP_DELIVERY      Type = 0x1f
 )
 
+var (
+	CommandName = map[Type]string{
+		SET_UNIQUE_ID:      "SET_UNIQUE_ID",
+		GET_VERSION:        "GET_VERSION",
+		GET_STATUS:         "GET_STATUS",
+		SILENCE_ALERTS:     "SILENCE_ALERTS",
+		PROGRAM_BASAL:      "PROGRAM_BASAL",
+		PROGRAM_TEMP_BASAL: "PROGRAM_TEMP_BASAL",
+		PROGRAM_BOLUS:      "PROGRAM_BOLUS",
+		PROGRAM_ALERTS:     "PROGRAM_ALERTS",
+		PROGRAM_INSULIN:    "PROGRAM_INSULIN",
+		DEACTIVATE:         "DEACTIVATE",
+		PROGRAM_BEEPS:      "PROGRAM_BEEPS",
+		STOP_DELIVERY:      "STOP_DELIVERY",
+	}
+)
+
 type Command interface {
 	GetResponse() (response.Response, error)
 	SetHeaderData(uint8, []byte) error
@@ -58,7 +75,7 @@ func Unmarshal(data []byte) (Command, error) {
 		return nil, fmt.Errorf("command too short: %x", data)
 	}
 
-	log.Infof("Command data: %x", data)
+	log.Tracef("command data: %x", data)
 	id := data[:4]
 	var lsf uint16 = uint16(data[4])<<8 | uint16(data[5])
 	length := int(lsf & 1023)
@@ -68,7 +85,7 @@ func Unmarshal(data []byte) (Command, error) {
 	}
 	crc := data[n-2:]
 	t := Type(data[6])
-	log.Debugf("CRC: %x. Type: %x", crc, t)
+	log.Debugf("got command. CRC: %x. Type: %x :: %s", crc, t, CommandName[t])
 	// TODO verify CRC
 	data = data[7 : n-2]
 	var ret Command
@@ -77,8 +94,12 @@ func Unmarshal(data []byte) (Command, error) {
 		ret, err = UnmarshalGetVersion(data)
 	case SET_UNIQUE_ID:
 		ret, err = UnmarshalSetUniqueID(data)
-	case PROGRAM_ALERTS, PROGRAM_BASAL, PROGRAM_INSULIN, GET_STATUS:
+	case PROGRAM_ALERTS:
 		ret, err = UnmarshalProgramAlerts(data)
+	case PROGRAM_INSULIN:
+		ret, err = UnmarshalProgramInsulin(data)
+	case GET_STATUS:
+		ret, err = UnmarshalGetStatus(data)
 	default:
 		ret, err = UnmarshalNack(data)
 	}

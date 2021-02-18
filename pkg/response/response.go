@@ -32,8 +32,9 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	// write header
+	log.Debugf("response payload: %x", payload)
 
+	// write header
 	buf.Write(responseID) // 4 bytes
 	if buf.Len() != 4 {
 		return nil, fmt.Errorf("responseID should be 4 bytes, got:  %x", responseID)
@@ -47,7 +48,7 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	buf.WriteByte(byte(header))
 	buf.Write(payload)
 	buf.Write(crc.CRC16(buf.Bytes()))
-	log.Debugf("Response payloadWithHeaderAndCRC: %x", buf.Bytes())
+	log.Tracef("response payloadWithHeaderAndCRC: %x", buf.Bytes())
 	return buf.Bytes(), nil
 }
 

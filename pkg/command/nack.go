@@ -13,7 +13,7 @@ type Nack struct {
 
 func UnmarshalNack(data []byte) (*Nack, error) {
 	ret := &Nack{}
-	log.Debugf("Unmarshal Nack: %x", data)
+	log.Infof("umarshal Nack. we do not implement this command yet: %x", data)
 	return ret, nil
 }
 

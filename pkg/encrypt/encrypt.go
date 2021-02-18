@@ -11,7 +11,6 @@ import (
 )
 
 func buildNonce(noncePrefix []byte, seq uint64, podReceiving bool) []byte {
-	log.Infof("Seq: %d", seq)
 	seq &= 549755813887
 	seqBytes := []byte{
 		(byte)(seq >> 32),
@@ -29,9 +28,9 @@ func buildNonce(noncePrefix []byte, seq uint64, podReceiving bool) []byte {
 }
 
 func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) (*bluetooth.Message, error) {
-	log.Debugf("Using CK:    %x", ck)
+	log.Tracef("using CK:    %x", ck)
 	nonce := buildNonce(noncePrefix, seq, true)
-	log.Debugf("Using Nonce: %x :: %d", nonce, len(nonce))
+	log.Tracef("decrypt: using nonce: %x :: %d", nonce, len(nonce))
 	aes, err := aes.NewCipher(ck)
 	if err != nil {
 		return nil, fmt.Errorf("could not create aes: %w", err)
@@ -46,9 +45,9 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	tag := msg.Payload[n-8:]
 	encryptedData := msg.Payload[:n-8]
 
-	log.Debugf("MAC: %x", tag, len(tag))
-	log.Debugf("Data: %x :: %d", encryptedData, len(encryptedData))
-	log.Debugf("Header: %x :: %d", header, len(header))
+	log.Tracef("MAC: %x :: %d", tag, len(tag))
+	log.Tracef("Data: %x :: %d", encryptedData, len(encryptedData))
+	log.Tracef("Header: %x :: %d", header, len(header))
 
 	decrypted, err := ccm.Open([]byte{}, nonce, msg.Payload, header)
 	if err != nil {
@@ -56,7 +55,7 @@ func DecryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	}
 	msg.EncryptedPayload = false
 	msg.Payload = decrypted
-	log.Debugf("Decrypted: %x", decrypted)
+	log.Tracef("decrypted: %x", decrypted)
 
 	return msg, nil
 }
@@ -66,9 +65,9 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 		return msg, nil
 	}
 
-	log.Debugf("Using CK:    %x", ck)
+	log.Tracef("using CK:    %x", ck)
 	nonce := buildNonce(noncePrefix, seq, false)
-	log.Debugf("Using Nonce: %x :: %d", nonce, len(nonce))
+	log.Tracef("encrypt: using nonce: %x :: %d", nonce, len(nonce))
 	aes, err := aes.NewCipher(ck)
 	if err != nil {
 		return nil, fmt.Errorf("could not create aes: %w", err)
@@ -89,7 +88,7 @@ func EncryptMessage(ck, noncePrefix []byte, seq uint64, msg *bluetooth.Message) 
 	encrypted := ccm.Seal(nil, nonce, toEncrypt, header)
 	msg.Raw = append(header, encrypted...)
 	msg.EncryptedPayload = true
-	log.Debugf("Encrypted: %x", msg.Raw)
+	log.Tracef("encrypted: %x", msg.Raw)
 
 	return msg, nil
 }

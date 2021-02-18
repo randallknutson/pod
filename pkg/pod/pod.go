@@ -152,7 +152,6 @@ func (p *Pod) CommandLoop() {
 		if err != nil {
 			log.Fatalf("could not unmarshal command: %s", err)
 		}
-		log.Infof("Got command: %+v", cmd)
 		cmdSeq, requestID, err := cmd.GetHeaderData()
 		if err != nil {
 			log.Fatalf("could not get command header data", err)
@@ -186,7 +185,7 @@ func (p *Pod) CommandLoop() {
 		p.ble.WriteMessage(msg)
 		log.Tracef("Sending response: %s", spew.Sdump(msg))
 
-		log.Debugf("Reading response ACK. Nonce seq %d", p.nonceSeq)
+		log.Trace("Reading response ACK. Nonce seq %d", p.nonceSeq)
 		msg, _ = p.ble.ReadMessage()
 		// TODO check for SEQ numbers here and the Ack flag
 		decrypted, err = encrypt.DecryptMessage(p.ck, p.noncePrefix, p.nonceSeq, msg)
