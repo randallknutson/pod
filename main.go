@@ -27,7 +27,7 @@ func main() {
 	ble, err := bluetooth.New("hci0")
 	//defer ble.Close()
 	if err != nil {
-		log.Fatalf("Could not start BLE: ", err)
+		log.Fatalf("Could not start BLE: %s", err)
 	}
 
 	p := pod.New(ble, *stateFile, *freshState)

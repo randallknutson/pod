@@ -141,7 +141,7 @@ func (c *Pair) ParseSPS2(msg *message.Message) error {
 		return err
 	}
 
-	if bytes.Compare(c.pdmConf, sp[sps2]) != 0 {
+	if !bytes.Equal(c.pdmConf, sp[sps2]) {
 		return fmt.Errorf("Invalid conf value. Expected: %x. Got %x", c.pdmConf, sp[sps2])
 	}
 	log.Debugf("Validated PDM SPS2: %x", sp[sps2])

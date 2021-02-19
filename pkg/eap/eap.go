@@ -25,9 +25,9 @@ const (
 	SubTypeAkaChallenge = 1
 
 	AT_RAND      AttributeType = 1
-	AT_AUTN                    = 2
-	AT_RES                     = 3
-	AT_CUSTOM_IV               = 126
+	AT_AUTN      AttributeType = 2
+	AT_RES       AttributeType = 3
+	AT_CUSTOM_IV AttributeType = 126
 )
 
 type Attribute struct {
@@ -143,8 +143,9 @@ func (e *EapAka) Marshal() ([]byte, error) {
 	buf.Write([]byte{0, 0}) // Eap-Aka reserved
 
 	for k, v := range e.Attributes {
+		var len byte
 		buf.WriteByte(byte(k))
-		len := byte(len(v.Data) / 4)
+		//len := byte(len(v.Data) / 4)
 		dataLen := 0
 		switch k {
 		case AT_RAND, AT_AUTN:
@@ -196,7 +197,7 @@ func (e *EapAkaChallenge) ParseChallenge(msg *message.Message) error {
 		return fmt.Errorf("error parsing eap message: %s", err)
 	}
 
-	log.Trace("challenge: %s", spew.Sdump(eapChallenge))
+	log.Tracef("challenge: %s", spew.Sdump(eapChallenge))
 	e.rand = eapChallenge.Attributes[AT_RAND].Data
 	e.autn = eapChallenge.Attributes[AT_AUTN].Data
 	e.pdmIV = eapChallenge.Attributes[AT_CUSTOM_IV].Data

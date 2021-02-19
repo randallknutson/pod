@@ -34,9 +34,7 @@ type Ble struct {
 	messageInput  chan *message.Message
 	messageOutput chan *message.Message
 
-	connectionStarted bool
-	stopLoop          chan bool
-	newConnCallback   func()
+	stopLoop chan bool
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -141,10 +139,12 @@ func New(adapterID string) (*Ble, error) {
 					return 0
 				})
 
-			d.AddService(s)
-
+			err = d.AddService(s)
+			if err != nil {
+				log.Fatalf("could not add service: %s", err)
+			}
 			// Advertise device name and service's UUIDs.
-			d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
+			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
 				gatt.UUID16(0x4024),
 				gatt.UUID16(0x2470),
 				gatt.UUID16(0x000a),
@@ -155,10 +155,16 @@ func New(adapterID string) (*Ble, error) {
 				gatt.UUID16(0xaaaa),
 				gatt.UUID16(0xaaaa),
 			})
+			if err != nil {
+				log.Fatalf("could not advertise: %s", err)
+			}
 		default:
 		}
 	}
-	d.Init(onStateChanged)
+	err = d.Init(onStateChanged)
+	if err != nil {
+		log.Fatalf("could not init bluetooth: %s", err)
+	}
 	return b, nil
 }
 
@@ -238,7 +244,7 @@ func (b *Ble) loop(stop chan bool) {
 
 func (b *Ble) expectCommand(expected Packet) {
 	cmd, _ := b.ReadCmd()
-	if bytes.Compare(expected, cmd) != 0 {
+	if !bytes.Equal(expected, cmd) {
 		log.Fatalf("expected command: %s. received command: %s", expected, cmd)
 	}
 }
@@ -327,7 +333,7 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
 
-	if bytes.Compare(cmd, CmdRTS) != 0 {
+	if !bytes.Equal(cmd, CmdRTS) {
 		log.Fatalf("expected RTS: %s. received: %s", CmdRTS, cmd)
 	}
 	b.WriteCmd(CmdCTS)

@@ -65,6 +65,9 @@ func TestEapAka_MarshalUnmarshal(t *testing.T) {
 			}
 
 			back, err := Unmarshal(got)
+			if err != nil {
+				t.Error(err)
+			}
 			if diff := cmp.Diff(tt.eap, back); diff != "" {
 				t.Errorf("EapAka.Unmarshal() mismatch (-want +got):\n%s", diff)
 			}

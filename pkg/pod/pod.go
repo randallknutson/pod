@@ -13,15 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type podState int
-
-const (
-	podStateNotInitialized podState = iota
-	podStateWithID
-	podStateWithLTK
-	podStateWithCK
-)
-
 type Pod struct {
 	ble   *bluetooth.Ble
 	state *PODState
@@ -97,7 +88,7 @@ func (p *Pod) StartActivation() {
 	msg, _ = p.ble.ReadMessage()
 	err = pair.ParseSP0GP0(msg)
 	if err != nil {
-		log.Fatalf("could not parse SP0GP0: %w", err)
+		log.Fatalf("could not parse SP0GP0: %s", err)
 	}
 
 	// send P0 constant
@@ -177,7 +168,7 @@ func (p *Pod) CommandLoop() {
 		}
 		cmdSeq, requestID, err := cmd.GetHeaderData()
 		if err != nil {
-			log.Fatalf("could not get command header data", err)
+			log.Fatalf("could not get command header data: %s", err)
 		}
 		p.state.CmdSeq = cmdSeq
 		rsp, err := cmd.GetResponse()
@@ -210,7 +201,7 @@ func (p *Pod) CommandLoop() {
 		p.ble.WriteMessage(msg)
 		log.Tracef("sending response: %s", spew.Sdump(msg))
 
-		log.Trace("reading response ACK. Nonce seq %d", p.state.NonceSeq)
+		log.Tracef("reading response ACK. Nonce seq %d", p.state.NonceSeq)
 		msg, _ = p.ble.ReadMessage()
 		// TODO check for SEQ numbers here and the Ack flag
 		decrypted, err = encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
