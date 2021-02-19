@@ -134,10 +134,10 @@ func (p *Pod) EapAka() {
 	p.ble.WriteMessage(msg)
 
 	msg, _ = p.ble.ReadMessage()
-	log.Debugf("success? %x", msg.Payload)
+	log.Debugf("success? %x", msg.Payload) // TODO: figure out how error looks like
 	err = pair.ParseSuccess(msg)
 	if err != nil {
-		log.Fatalf("Error parsing the EAP-AKA Success packet: %s", err)
+		log.Fatalf("error parsing the EAP-AKA Success packet: %s", err)
 	}
 	p.state.CK, p.state.NoncePrefix = pair.CKNoncePrefix()
 

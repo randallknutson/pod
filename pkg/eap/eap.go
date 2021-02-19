@@ -110,7 +110,7 @@ func Unmarshal(data []byte) (*EapAka, error) {
 			}
 			data = data[2:] // skip two reserved bytes
 		default:
-			return nil, fmt.Errorf("Received unknown EAP attribute type: %d", aType)
+			return nil, fmt.Errorf("received unknown EAP attribute type: %d", aType)
 		}
 		a := &Attribute{
 			Data: data,
@@ -132,7 +132,7 @@ func (e *EapAka) Marshal() ([]byte, error) {
 	if len(e.Attributes) == 0 { // short packet: success/failure
 		len := uint16(buf.Len()) //?
 		e.Len = int(len)
-		log.Debugf("Buf len: %d", buf.Len())
+		log.Tracef("short packet buf len: %d", buf.Len())
 		ret := buf.Bytes()
 		ret[2] = byte(len<<8) & 0xFF
 		ret[3] = byte(len)
@@ -170,7 +170,6 @@ func (e *EapAka) Marshal() ([]byte, error) {
 	}
 	len := uint16(buf.Len()) //?
 	e.Len = int(len)
-	log.Debugf("Buf len: %d", buf.Len())
 	ret := buf.Bytes()
 	ret[2] = byte(len<<8) & 0xFF
 	ret[3] = byte(len)
