@@ -1,7 +1,7 @@
 # pod
 
 Fake pod implementation
-The "packet" folder it's just bits and small pieces that I used trying to figure out the protocol with data from logs.
+The "scripts" folder is just bits and small pieces that I used trying to figure out the protocol with data from logs.
 
 ## How to build
 
@@ -9,8 +9,15 @@ The "packet" folder it's just bits and small pieces that I used trying to figure
 go build
 ```
 
+building for Raspberry Pi:
+```
+GOARCH=arm go build`
+
+```
+
 ## How to run
 
+Tested so far only on Linux.
 Before running, bring the BLE device down and stop bluetooth daemon
 ```
 sudo hciconfig
