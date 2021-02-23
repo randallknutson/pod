@@ -24,6 +24,7 @@ sudo hciconfig
 sudo hciconfig hci0 down
 
 sudo service bluetooth stop
+sudo  systemctl  disable bluetooth
 ```
 
 Before running, the executable must be granted capabilities(or run as root):
