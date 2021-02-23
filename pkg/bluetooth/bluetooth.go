@@ -146,8 +146,10 @@ func New(adapterID string) (*Ble, error) {
 			// Advertise device name and service's UUIDs.
 			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
 				gatt.UUID16(0x4024),
+
 				gatt.UUID16(0x2470),
 				gatt.UUID16(0x000a),
+
 				gatt.UUID16(0xffff),
 				gatt.UUID16(0xfffe),
 				gatt.UUID16(0xaaaa),

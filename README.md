@@ -33,10 +33,10 @@ sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
 And then run
 
 ```
-./pod
+./pod -fresh
 ```
 
-## How to build&run for pi
+## How to build&run for Raspberry pi
 
 ```
 GOARCH=arm go build; ssh pi 'killall pod'; scp pod pi:~/ && ssh pi " sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod; ./pod"
