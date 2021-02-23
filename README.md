@@ -1,7 +1,8 @@
 # pod
 
 Fake pod implementation
-The "scripts" folder is just bits and small pieces that I used trying to figure out the protocol with data from logs.
+
+The "scripts" folder contains bits and small pieces that I used trying to figure out the protocol with data from logs.
 
 ## How to build
 
