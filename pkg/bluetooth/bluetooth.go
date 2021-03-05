@@ -9,6 +9,7 @@ import (
 	"hash/crc32"
 
 	"github.com/avereha/pod/pkg/message"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
@@ -132,7 +133,7 @@ func New(adapterID string) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("received DATA %x", data)
+					log.Tracef("received DATA [%x] -- %d", data, len(data))
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)
@@ -261,6 +262,7 @@ func (b *Ble) writeMessage(msg *message.Message) {
 	if err != nil {
 		log.Fatalf("could not marshal the message %s", err)
 	}
+	log.Tracef("Sending message: %x", bytes)
 	sum := crc32.ChecksumIEEE(bytes)
 	if len(bytes) <= 18 {
 		buf.WriteByte(index) // index
@@ -386,7 +388,7 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	bytes := buf.Bytes()
 	sum := crc32.ChecksumIEEE(bytes)
 	if binary.BigEndian.Uint32(checksum) != sum {
-		log.Warnf("checksum missmatch. checksum is: %x. want: %d", sum, checksum)
+		log.Warnf("checksum missmatch. checksum is: %x. want: %x", sum, checksum)
 		log.Warnf("data: %s", hex.EncodeToString(bytes))
 
 		b.WriteCmd(CmdFail)
@@ -395,5 +397,8 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 
 	b.WriteCmd(CmdSuccess)
 
-	return message.Unmarshal(bytes)
+	msg, _err := message.Unmarshal(bytes)
+	log.Tracef("Received message:", spew.Sdump(msg))
+
+	return msg, _err
 }

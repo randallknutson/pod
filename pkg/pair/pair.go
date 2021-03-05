@@ -72,6 +72,8 @@ func buildStringByte(names []string, values map[string][]byte) ([]byte, error) {
 }
 
 func (c *Pair) ParseSP1SP2(msg *message.Message) error {
+	log.Infof("Received SP1 SP2 payload %x", msg.Payload)
+
 	sp, err := parseStringByte([]string{sp1, sp2}, msg.Payload)
 	if err != nil {
 		log.Debugf("Message :%s", spew.Sdump(msg))
@@ -224,7 +226,7 @@ func (c *Pair) computePairData() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("CMACY: %d", first.Size())
+	log.Debugf("CMAC: %d", first.Size())
 	first.Write(c.curve25519LTK)
 	intermediarKey := first.Sum([]byte{})
 

@@ -17,7 +17,8 @@ func main() {
 
 	flag.Parse()
 
-	log.SetLevel(log.DebugLevel)
+
+	log.SetLevel(log.TraceLevel)
 
 	log.SetFormatter(&logrus.TextFormatter{
 		DisableQuote: true,
