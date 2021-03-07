@@ -337,7 +337,12 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
 
-	b.expectCommand(CmdRTS)
+	log.Trace("Reading RTS")
+	if !bytes.Equal(CmdRTS[:1], cmd[:1]) {
+		log.Fatalf("expected command: %x. received command: %x", CmdRTS, cmd)
+	}
+	log.Trace("Sending CTS")
+
 	b.WriteCmd(CmdCTS)
 
 	first, _ := b.ReadData()
