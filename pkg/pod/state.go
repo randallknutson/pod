@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 
 	toml "github.com/pelletier/go-toml"
+	log "github.com/sirupsen/logrus"
 )
 
 type PODState struct {
@@ -23,6 +24,7 @@ type PODState struct {
 
 func NewState(filename string) (*PODState, error) {
 	var ret PODState
+	ret.filename = filename
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -35,6 +37,7 @@ func NewState(filename string) (*PODState, error) {
 }
 
 func (p *PODState) Save() error {
+	log.Debugf("Saving state to file: %s", p.filename)
 	data, err := toml.Marshal(p)
 	if err != nil {
 		return err

@@ -103,7 +103,7 @@ func (p *Pod) StartActivation() {
 		log.Fatalf("could not get LTK %s", err)
 	}
 	log.Infof("LTK %x", p.state.LTK)
-	p.state.EapAkaSeq = 2
+	p.state.EapAkaSeq = 1
 	p.state.Save()
 
 	p.EapAka()
@@ -111,15 +111,15 @@ func (p *Pod) StartActivation() {
 
 func (p *Pod) EapAka() {
 
-	pair := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
+	session := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
 
 	msg, _ := p.ble.ReadMessage()
-	err := pair.ParseChallenge(msg)
+	err := session.ParseChallenge(msg)
 	if err != nil {
 		log.Fatalf("error parsing the EAP-AKA challenge: %s", err)
 	}
 
-	msg, err = pair.GenerateChallengeResponse()
+	msg, err = session.GenerateChallengeResponse()
 	if err != nil {
 		log.Fatalf("error generating the eap-aka challenge response")
 	}
@@ -127,22 +127,26 @@ func (p *Pod) EapAka() {
 
 	msg, _ = p.ble.ReadMessage()
 	log.Debugf("success? %x", msg.Payload) // TODO: figure out how error looks like
-	err = pair.ParseSuccess(msg)
+	err = session.ParseSuccess(msg)
 	if err != nil {
 		log.Fatalf("error parsing the EAP-AKA Success packet: %s", err)
 	}
-	p.state.CK, p.state.NoncePrefix = pair.CKNoncePrefix()
+	p.state.CK, p.state.NoncePrefix = session.CKNoncePrefix()
 
 	p.state.NonceSeq = 1
 	p.state.MsgSeq = 1
-
+	p.state.EapAkaSeq = session.Sqn
 	log.Infof("got CK: %x", p.state.CK)
-	log.Infof("got Nonce: %x", p.state.NoncePrefix)
-	log.Infof("using SEQ: %d", p.state.NonceSeq)
-	p.state.Save()
+	log.Infof("got NONCE: %x", p.state.NoncePrefix)
+	log.Infof("using NONCE SEQ: %d", p.state.NonceSeq)
+	log.Infof("EAP-AKA session SQN: %d", p.state.EapAkaSeq)
+
+	err = p.state.Save()
+	if err != nil {
+		log.Fatalf("Could not save the pod state: %s", err)
+	}
 
 	p.CommandLoop()
-	// ??? Start encryption ???
 }
 
 func (p *Pod) CommandLoop() {

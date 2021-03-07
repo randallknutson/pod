@@ -119,7 +119,6 @@ func Unmarshal(data []byte) (*EapAka, error) {
 			Data: data,
 		}
 		ret.Attributes[aType] = a
-		log.Debugf("Eap attribute: %d", aType)
 		tail = tail[len:]
 	}
 
@@ -184,13 +183,13 @@ func (e *EapAka) Marshal() ([]byte, error) {
 func NewEapAkaChallenge(k []byte, sqn uint64) *EapAkaChallenge {
 	op, _ := hex.DecodeString("cdc202d5123e20f62b6d676ac72cb318")
 	// amf, _ := hex.DecodeString("b9b9")
-
+	log.Debugf("Starting EAP-AKA session with SQN(after incrementing SQN): %d", sqn+1)
 	return &EapAkaChallenge{
 		k:     k,
 		op:    op,
-		Sqn:   sqn,
+		Sqn:   sqn + 1,
 		amf:   47545,                      // b9b9
-		podIV: []byte{0xa, 0xa, 0xa, 0xa}, // constant for now, eaiser to debug. TODO
+		podIV: []byte{0xa, 0xa, 0xa, 0xa}, // constant for now, easier to debug. TODO
 	}
 }
 
@@ -202,7 +201,7 @@ func (e *EapAkaChallenge) ParseChallenge(msg *message.Message) error {
 		return fmt.Errorf("error parsing eap message: %s", err)
 	}
 
-	log.Debugf("challenge: %s", spew.Sdump(eapChallenge))
+	log.Debugf("received EAP-AKA challenge: %s", spew.Sdump(eapChallenge))
 	e.rand = eapChallenge.Attributes[AT_RAND].Data
 	e.autn = eapChallenge.Attributes[AT_AUTN].Data
 	e.pdmIV = eapChallenge.Attributes[AT_CUSTOM_IV].Data
