@@ -77,6 +77,9 @@ func Unmarshal(data []byte) (*EapAka, error) {
 	if ret.Len <= 4 { // eap success/failure
 		return ret, nil
 	}
+	if ret.Len < len(data) {
+		return nil, fmt.Errorf("expected len: %d. Actual: %d", ret.Len, len(data))
+	}
 
 	if data[4] != 0x17 {
 		return nil, fmt.Errorf("invalid eap packet type. Expected 23. %d %x", data[4], data)
@@ -116,6 +119,7 @@ func Unmarshal(data []byte) (*EapAka, error) {
 			Data: data,
 		}
 		ret.Attributes[aType] = a
+		log.Debugf("Eap attribute: %d", aType)
 		tail = tail[len:]
 	}
 
@@ -177,13 +181,14 @@ func (e *EapAka) Marshal() ([]byte, error) {
 	return ret, nil
 }
 
-func NewEapAkaChallenge(k []byte) *EapAkaChallenge {
+func NewEapAkaChallenge(k []byte, sqn uint64) *EapAkaChallenge {
 	op, _ := hex.DecodeString("cdc202d5123e20f62b6d676ac72cb318")
 	// amf, _ := hex.DecodeString("b9b9")
 
 	return &EapAkaChallenge{
 		k:     k,
 		op:    op,
+		Sqn:   sqn,
 		amf:   47545,                      // b9b9
 		podIV: []byte{0xa, 0xa, 0xa, 0xa}, // constant for now, eaiser to debug. TODO
 	}
@@ -197,7 +202,7 @@ func (e *EapAkaChallenge) ParseChallenge(msg *message.Message) error {
 		return fmt.Errorf("error parsing eap message: %s", err)
 	}
 
-	log.Tracef("challenge: %s", spew.Sdump(eapChallenge))
+	log.Debugf("challenge: %s", spew.Sdump(eapChallenge))
 	e.rand = eapChallenge.Attributes[AT_RAND].Data
 	e.autn = eapChallenge.Attributes[AT_AUTN].Data
 	e.pdmIV = eapChallenge.Attributes[AT_CUSTOM_IV].Data
@@ -228,6 +233,7 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*message.Message, error) 
 	)
 
 	// TODO check AUTN
+
 	// TODO check if IK/AK is used for anything
 	e.res, e.ck, _, _, err = mil.F2345()
 	if err != nil {
@@ -249,11 +255,14 @@ func (e *EapAkaChallenge) GenerateChallengeResponse() (*message.Message, error) 
 	if err != nil {
 		return nil, err
 	}
-
+	mil.F1()
 	log.Tracef("response: %s :: %d", spew.Sdump(eap), len(eap.Attributes))
 	log.Debugf("EapAka response payload: %x", ret.Payload)
 	log.Debugf("EapAka AUTN %x", e.autn)
+	log.Debugf("EapAka RAND %x", e.rand)
 	log.Debugf("EapAka RES %x", e.res)
+	log.Debugf("EapAka Milenage AK %x", mil.AK)
+	log.Debugf("EapAka Milenage MACA %x", mil.MACA)
 	log.Debugf("EapAka CK %x", e.ck)
 	log.Debugf("EapAka K %x", e.k)
 	log.Debugf("EapAka podIV %x", e.podIV)

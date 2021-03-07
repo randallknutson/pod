@@ -103,6 +103,7 @@ func (p *Pod) StartActivation() {
 		log.Fatalf("could not get LTK %s", err)
 	}
 	log.Infof("LTK %x", p.state.LTK)
+	p.state.EapAkaSeq = 2
 	p.state.Save()
 
 	p.EapAka()
@@ -110,7 +111,7 @@ func (p *Pod) StartActivation() {
 
 func (p *Pod) EapAka() {
 
-	pair := eap.NewEapAkaChallenge(p.state.LTK)
+	pair := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
 
 	msg, _ := p.ble.ReadMessage()
 	err := pair.ParseChallenge(msg)
@@ -147,7 +148,10 @@ func (p *Pod) EapAka() {
 func (p *Pod) CommandLoop() {
 	var lastMsgSeq uint8 = 0
 	for {
+		log.Debugf("reading the next command")
 		msg, _ := p.ble.ReadMessage()
+		log.Tracef("got command message: %s", spew.Sdump(msg))
+
 		if msg.SequenceNumber == lastMsgSeq {
 			// this is a retry because we did not answer yet
 			// ignore duplicate commands/mesages
@@ -155,7 +159,6 @@ func (p *Pod) CommandLoop() {
 		}
 		lastMsgSeq = msg.SequenceNumber
 
-		log.Tracef("got command message: %s", spew.Sdump(msg))
 		decrypted, err := encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
 			log.Fatalf("could not decrypt message: %s", err)
@@ -198,10 +201,10 @@ func (p *Pod) CommandLoop() {
 		p.state.NonceSeq++
 		p.state.Save()
 
-		p.ble.WriteMessage(msg)
 		log.Tracef("sending response: %s", spew.Sdump(msg))
+		p.ble.WriteMessage(msg)
 
-		log.Tracef("reading response ACK. Nonce seq %d", p.state.NonceSeq)
+		log.Debugf("reading response ACK. Nonce seq %d", p.state.NonceSeq)
 		msg, _ = p.ble.ReadMessage()
 		// TODO check for SEQ numbers here and the Ack flag
 		decrypted, err = encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)

@@ -247,7 +247,7 @@ func (b *Ble) loop(stop chan bool) {
 
 func (b *Ble) expectCommand(expected Packet) {
 	cmd, _ := b.ReadCmd()
-	if !bytes.Equal(expected, cmd) {
+	if !bytes.Equal(expected[:1], cmd[:1]) {
 		log.Fatalf("expected command: %s. received command: %s", expected, cmd)
 	}
 }
@@ -337,9 +337,7 @@ func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
 
-	if !bytes.Equal(cmd, CmdRTS) {
-		log.Fatalf("expected RTS: %s. received: %s", CmdRTS, cmd)
-	}
+	b.expectCommand(CmdRTS)
 	b.WriteCmd(CmdCTS)
 
 	first, _ := b.ReadData()

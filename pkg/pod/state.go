@@ -7,7 +7,8 @@ import (
 )
 
 type PODState struct {
-	LTK []byte `toml:"ltk"`
+	LTK       []byte `toml:"ltk"`
+	EapAkaSeq uint64 `toml:"eap_aka_seq"`
 
 	Id []byte `toml:"id"` // 4 byte
 
