@@ -37,6 +37,20 @@ And then run
 ./pod -fresh
 ```
 
+## Flags
+
+```
+$ ./pod  --help
+Usage of ./pod:
+  -fresh
+        start fresh. not activated, empty state
+  -state string
+        pod state (default "state.toml")
+
+```
+
+When running with `-fresh`, the state will be saved, so running it twice(first with `-fresh`, then without) should work.
+
 ## How to build & run for Raspberry pi
 
 ```
