@@ -17,7 +17,7 @@ GOARCH=arm go build`
 
 ## How to run
 
-Tested so far only on Linux.
+This was tested so far only on Linux.
 Before running, bring the BLE device down and stop bluetooth daemon
 ```
 sudo hciconfig
