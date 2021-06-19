@@ -52,6 +52,7 @@ Usage of ./pod:
 When running with `-fresh`, the state will be saved, so running it twice(first with `-fresh`, then without) should work.
 
 ## How to build & run for Raspberry pi
+Tested on `Raspberry Pi 3B+` running `Raspbian 10`
 
 ```
 GOARCH=arm go build; 
