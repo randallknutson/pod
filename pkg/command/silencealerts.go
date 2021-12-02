@@ -13,7 +13,7 @@ import (
 func UnmarshalSilenceAlerts(data []byte) (*SilenceAlerts, error) {
 	ret := &SilenceAlerts{}
 	// TODO deserialize this command
-	log.Infof("SilenceAlerts, 0x0e, received, data 0x%x", data)
+	log.Infof("SilenceAlerts, 0x11, received, data 0x%x", data)
 	return ret, nil
 }
 
