@@ -23,6 +23,7 @@ const (
 	DEACTIVATE         Type = 0x1c
 	PROGRAM_BEEPS      Type = 0x1e
 	STOP_DELIVERY      Type = 0x1f
+	CNFG_DELIV_FLAG    Type = 0x08 // Loop uses configure delivery flag
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 		DEACTIVATE:         "DEACTIVATE",
 		PROGRAM_BEEPS:      "PROGRAM_BEEPS",
 		STOP_DELIVERY:      "STOP_DELIVERY",
+		CNFG_DELIV_FLAG:    "CNFG_DELIV_FLAG",
 	}
 )
 
@@ -99,6 +101,16 @@ func Unmarshal(data []byte) (Command, error) {
 	case PROGRAM_INSULIN:
 		ret, err = UnmarshalProgramInsulin(data)
 	case GET_STATUS:
+		ret, err = UnmarshalGetStatus(data)
+	case SILENCE_ALERTS:
+		ret, err = UnmarshalGetStatus(data)
+	case DEACTIVATE:
+		ret, err = UnmarshalGetStatus(data)
+	case PROGRAM_BEEPS:
+		ret, err = UnmarshalGetStatus(data)
+	case STOP_DELIVERY:
+		ret, err = UnmarshalGetStatus(data)
+	case CNFG_DELIV_FLAG:
 		ret, err = UnmarshalGetStatus(data)
 	default:
 		ret, err = UnmarshalNack(data)
