@@ -13,7 +13,7 @@ import (
 func UnmarshalProgramBeeps(data []byte) (*ProgramBeeps, error) {
 	ret := &ProgramBeeps{}
 	// TODO deserialize this command
-	log.Infof("ProgramBeeps, 0x1c, received, data 0x%x", data)
+	log.Infof("ProgramBeeps, 0x1e, received, data 0x%x", data)
 	return ret, nil
 }
 
