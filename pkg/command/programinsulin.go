@@ -13,7 +13,7 @@ type ProgramInsulin struct {
 func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
 	ret := &ProgramInsulin{}
 	// TODO deserialize this command
-	log.Infof("do not understand the ProgramInsulin command yet: %x", data)
+	log.Infof("ProgramInsulin, 0x1a, received, data 0x%x", data)
 	return ret, nil
 }
 

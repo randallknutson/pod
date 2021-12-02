@@ -87,7 +87,7 @@ func Unmarshal(data []byte) (Command, error) {
 	}
 	crc := data[n-2:]
 	t := Type(data[6])
-	log.Debugf("got command. CRC: %x. Type: %x :: %s", crc, t, CommandName[t])
+	log.Debugf("got command. CRC: 0x%x. Type: 0x%x :: %s", crc, t, CommandName[t])
 	// TODO verify CRC
 	data = data[7 : n-2]
 	var ret Command

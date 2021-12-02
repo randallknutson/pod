@@ -13,7 +13,7 @@ type GetStatus struct {
 func UnmarshalGetStatus(data []byte) (*GetStatus, error) {
 	ret := &GetStatus{}
 	// TODO deserialize this command
-	log.Infof("do not understand the GetStatus command yet: %x", data)
+	log.Infof("GetStatus, 0x0e, received, data 0x%x", data)
 	return ret, nil
 }
 

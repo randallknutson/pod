@@ -13,7 +13,7 @@ type CancelDelivery struct {
 func UnmarshalCancelDelivery(data []byte) (*CancelDelivery, error) {
 	ret := &CancelDelivery{}
 	// TODO deserialize this command
-	log.Infof("CancelDelivery, 0x1f, accepted but not parsed: %x", data)
+	log.Infof("CancelDelivery, 0x1f, received, data 0x%x", data)
 	return ret, nil
 }
 
