@@ -87,7 +87,7 @@ func Unmarshal(data []byte) (Command, error) {
 	}
 	crc := data[n-2:]
 	t := Type(data[6])
-	log.Debugf("got command. CRC: 0x%x. Type: 0x%x :: %s", crc, t, CommandName[t])
+	log.Debugf("got command. CRC: 0x%4.4x. Type: 0x%2.2x :: %s", crc, t, CommandName[t])
 	// TODO verify CRC
 	data = data[7 : n-2]
 	var ret Command
@@ -103,15 +103,15 @@ func Unmarshal(data []byte) (Command, error) {
 	case GET_STATUS:
 		ret, err = UnmarshalGetStatus(data)
 	case SILENCE_ALERTS:
-		ret, err = UnmarshalGetStatus(data)
+		ret, err = UnmarshalSilenceAlerts(data)
 	case DEACTIVATE:
-		ret, err = UnmarshalGetStatus(data)
+		ret, err = UnmarshalDeactivate(data)
 	case PROGRAM_BEEPS:
-		ret, err = UnmarshalGetStatus(data)
+		ret, err = UnmarshalProgramBeeps(data)
 	case STOP_DELIVERY:
-		ret, err = UnmarshalCancelDelivery(data)
+		ret, err = UnmarshalStopDelivery(data)
 	case CNFG_DELIV_FLAG:
-		ret, err = UnmarshalGetStatus(data)
+		ret, err = UnmarshalCnfgDelivFlag(data)
 	default:
 		ret, err = UnmarshalNack(data)
 	}
