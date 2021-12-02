@@ -109,7 +109,7 @@ func Unmarshal(data []byte) (Command, error) {
 	case PROGRAM_BEEPS:
 		ret, err = UnmarshalGetStatus(data)
 	case STOP_DELIVERY:
-		ret, err = UnmarshalGetStatus(data)
+		ret, err = UnmarshalCancelDelivery(data)
 	case CNFG_DELIV_FLAG:
 		ret, err = UnmarshalGetStatus(data)
 	default:
