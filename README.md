@@ -2,7 +2,42 @@
 
 Fake pod implementation
 
-The "scripts" folder contains bits and small pieces that I used trying to figure out the protocol with data from logs.
+This was forked to loopnlearn as part of the development for dash-pods with iOS. 
+* The original 0pen-dash repository from which this was forked was removed by the owner.
+
+Requirements:
+1. Version of iOS code that handles this - under development - not ready for others to use
+2. Raspberry pi with Bluetooth BLE (using a pi4 right now)
+3. The user must have sudo privilege on the pi
+4. Install the go language on your device (search internet for procedure)
+  *  You can build on pi directly or use cross-compiler and scp the executable
+
+## Build on the pi
+
+Log on the pi and type the following commands, starting at {your_path}:
+```
+cd pod
+go build
+sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
+```
+
+## Run simulator on the pi
+
+To pair a new simulated dash pod:
+```
+./pod -fresh
+```
+
+To restore communication with an existing simulated dash pod:
+```
+./pod
+```
+
+# Original README.md
+
+We maintained the original README file below. It may be helpful if someone plans to cross-compile the code and just transfer the executable.
+
+The "scripts" folder contains bits and small pieces that I [original owner] used trying to figure out the protocol with data from logs.
 
 ## How to build
 
