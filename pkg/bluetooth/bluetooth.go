@@ -69,7 +69,7 @@ func New(adapterID string) (*Ble, error) {
 			b.StopMessageLoop()
 		}),
 		gatt.CentralDisconnected(func(c gatt.Central) {
-			log.Infof("pkg bluetooth; disconnect: %s", c.ID())
+			log.Fatalf("pkg bluetooth; disconnect: %s", c.ID())
 		}),
 	)
 
