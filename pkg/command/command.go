@@ -85,10 +85,10 @@ func Unmarshal(data []byte) (Command, error) {
 	if length+6+2 != n {
 		return nil, fmt.Errorf("invalid command length %d :: %d. %x", n, length+6+2, data)
 	}
-	crc := data[n-2:]
+	// crc := data[n-2:]
 	t := Type(data[6])
-	log.Debugf("got command. CRC: 0x%4.4x. Type: 0x%2.2x :: %s", crc, t, CommandName[t])
-	// TODO verify CRC
+	log.Infof(" Command: 0x%2.2x: %-15s, HEX: 0x%x", t, CommandName[t], data)
+	// TODO verify CRC, CRC always last 4 of HEX
 	data = data[7 : n-2]
 	var ret Command
 	switch t {
