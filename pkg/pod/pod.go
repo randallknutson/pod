@@ -157,7 +157,7 @@ func (p *Pod) EapAka(msg *message.Message) {
 func (p *Pod) CommandLoop() {
 	var lastMsgSeq uint8 = 0
 	for {
-		log.Debugf("reading the next command")
+		log.Debugf("  *** Waiting for the next command")
 		msg, _ := p.ble.ReadMessage()
 		log.Tracef("got command message: %s", spew.Sdump(msg))
 
