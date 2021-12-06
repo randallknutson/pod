@@ -19,7 +19,7 @@ func UnmarshalDeactivate(data []byte) (*Deactivate, error) {
 
 func (g *Deactivate) GetResponse() (response.Response, error) {
 	// TODO improve responses
-	return &response.GeneralStatusResponse{}, nil
+	return &response.DeactivateResponse{}, nil
 }
 
 func (g *Deactivate) SetHeaderData(seq uint8, id []byte) error {
