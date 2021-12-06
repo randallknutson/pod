@@ -5,6 +5,7 @@ import (
 	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
 	"github.com/avereha/pod/pkg/pair"
+	"github.com/avereha/pod/pkg/message"
 
 	"github.com/avereha/pod/pkg/encrypt"
 	"github.com/avereha/pod/pkg/response"
@@ -47,7 +48,8 @@ func (p *Pod) StartAcceptingCommands() {
 	p.ble.StartMessageLoop()
 
 	if p.state.LTK != nil { // paired, just establish new session
-		p.EapAka()
+		msg, _ := p.ble.ReadMessageExpectingCommand(firstCmd)
+		p.EapAka(msg)
 	} else {
 		p.StartActivation() // not paired, get the LTK
 	}
@@ -106,14 +108,17 @@ func (p *Pod) StartActivation() {
 	p.state.EapAkaSeq = 1
 	p.state.Save()
 
-	p.EapAka()
+	msg, err = p.ble.ReadMessage()
+  if err != nil {
+         log.Fatalf("could not get EapAka msg %s", err)
+  }
+  p.EapAka(msg)
 }
 
-func (p *Pod) EapAka() {
+func (p *Pod) EapAka(msg *message.Message) {
 
 	session := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
 
-	msg, _ := p.ble.ReadMessage()
 	err := session.ParseChallenge(msg)
 	if err != nil {
 		log.Fatalf("error parsing the EAP-AKA challenge: %s", err)
