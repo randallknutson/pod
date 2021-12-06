@@ -109,10 +109,10 @@ func (p *Pod) StartActivation() {
 	p.state.Save()
 
 	msg, err = p.ble.ReadMessage()
-  if err != nil {
-         log.Fatalf("could not get EapAka msg %s", err)
-  }
-  p.EapAka(msg)
+	if err != nil {
+	       log.Fatalf("could not get EapAka msg %s", err)
+	}
+	p.EapAka(msg)
 }
 
 func (p *Pod) EapAka(msg *message.Message) {
