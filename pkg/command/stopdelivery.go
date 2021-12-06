@@ -13,7 +13,7 @@ type StopDelivery struct {
 func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 	ret := &StopDelivery{}
 	// TODO deserialize this command
-	log.Infof("StopDelivery, 0x1f, received, data 0x%x", data)
+	log.Debugf("StopDelivery, 0x1f, received, data 0x%x", data)
 	return ret, nil
 }
 
