@@ -60,16 +60,16 @@ func New(adapterID string) (*Ble, error) {
 
 	d, err := gatt.NewDevice(DefaultServerOptions...)
 	if err != nil {
-		log.Fatalf("failed to open device, err: %s", err)
+		log.Fatalf("pkg bluetooth; failed to open device, err: %s", err)
 	}
 
 	d.Handle(
 		gatt.CentralConnected(func(c gatt.Central) {
-			fmt.Println("connect: ", c.ID())
+			fmt.Println("pkg bluetooth; connect: ", c.ID())
 			b.StopMessageLoop()
 		}),
 		gatt.CentralDisconnected(func(c gatt.Central) {
-			log.Fatalf("disconnect: %s", c.ID())
+			log.Infof("pkg bluetooth; disconnect: %s", c.ID())
 		}),
 	)
 
@@ -96,17 +96,17 @@ func New(adapterID string) (*Ble, error) {
 
 			cmdCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("enabled notifications for CMD: %s", r.Central.ID())
+					log.Infof("pkg bluetooth; enabled notifications for CMD:  %s", r.Central.ID())
 					go func() {
 						for {
 							if n.Done() {
-								log.Fatalf("CMD closed")
+								log.Fatalf("pkg bluetooth; CMD closed")
 							}
 							packet := <-b.cmdOutput
 							ret, err := n.Write(packet)
-							log.Tracef("CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
+							log.Tracef("pkg bluetooth; CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
-								log.Fatalf("error writing CMD: %s", err)
+								log.Fatalf("pkg bluetooth; error writing CMD: %s", err)
 							}
 						}
 					}()
@@ -115,17 +115,17 @@ func New(adapterID string) (*Ble, error) {
 			dataCharacteristic := s.AddCharacteristic(dataCharUUID)
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("enabled notifications for DATA: %s", r.Central.ID())
+					log.Infof("pkg bluetooth; enabled notifications for DATA: %s", r.Central.ID())
 					go func() {
 						for {
 							if n.Done() {
-								log.Fatalf("DATA closed")
+								log.Fatalf("pkg bluetooth; DATA closed")
 							}
 							packet := <-b.dataOutput
 							ret, err := n.Write(packet)
-							log.Tracef("DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
+							log.Tracef("pkg bluetooth; DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
 							if err != nil {
-								log.Fatalf("error writing DATA: %s ", err)
+								log.Fatalf("pkg bluetooth; error writing DATA: %s ", err)
 							}
 						}
 					}()
@@ -133,7 +133,7 @@ func New(adapterID string) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("received DATA [%x] -- %d", data, len(data))
+					log.Tracef("pkg bluetooth; received DATA [%x] -- %d", data, len(data))
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)
@@ -142,7 +142,7 @@ func New(adapterID string) (*Ble, error) {
 
 			err = d.AddService(s)
 			if err != nil {
-				log.Fatalf("could not add service: %s", err)
+				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
 			// Advertise device name and service's UUIDs.
 			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
@@ -159,21 +159,21 @@ func New(adapterID string) (*Ble, error) {
 				gatt.UUID16(0xaaaa),
 			})
 			if err != nil {
-				log.Fatalf("could not advertise: %s", err)
+				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
 			}
 		default:
 		}
 	}
 	err = d.Init(onStateChanged)
 	if err != nil {
-		log.Fatalf("could not init bluetooth: %s", err)
+		log.Fatalf("pkg bluetooth; could not init bluetooth: %s", err)
 	}
 	return b, nil
 }
 
 func (b *Ble) StartMessageLoop() {
 	if b.stopLoop != nil {
-		log.Fatalf("Messaging loop is already running")
+		log.Fatalf("pkg bluetooth; Messaging loop is already running")
 	}
 	b.stopLoop = make(chan bool)
 	go b.loop(b.stopLoop)
@@ -238,7 +238,7 @@ func (b *Ble) loop(stop chan bool) {
 		case cmd := <-b.cmdInput:
 			msg, err := b.ReadMessageExpectingCommand(cmd)
 			if err != nil {
-				log.Fatalf("error reading message: %s", err)
+				log.Fatalf("pkg bluetooth; error reading message: %s", err)
 			}
 			b.messageInput <- msg
 		}
@@ -248,7 +248,7 @@ func (b *Ble) loop(stop chan bool) {
 func (b *Ble) expectCommand(expected Packet) {
 	cmd, _ := b.ReadCmd()
 	if !bytes.Equal(expected[:1], cmd[:1]) {
-		log.Fatalf("expected command: %s. received command: %s", expected, cmd)
+		log.Fatalf("pkg bluetooth; expected command: %s. received command: %s", expected, cmd)
 	}
 }
 
@@ -260,9 +260,9 @@ func (b *Ble) writeMessage(msg *message.Message) {
 	b.expectCommand(CmdCTS) // TODO figure out what to do if !CTS
 	bytes, err := msg.Marshal()
 	if err != nil {
-		log.Fatalf("could not marshal the message %s", err)
+		log.Fatalf("pkg bluetooth; could not marshal the message %s", err)
 	}
-	log.Tracef("Sending message: %x", bytes)
+	log.Tracef("pkg bluetooth; Sending message: %x", bytes)
 	sum := crc32.ChecksumIEEE(bytes)
 	if len(bytes) <= 18 {
 		buf.WriteByte(index) // index
@@ -337,11 +337,11 @@ func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) 
 	var buf bytes.Buffer
 	var checksum []byte
 
-	log.Trace("Reading RTS")
+	log.Trace("pkg bluetooth; Reading RTS")
 	if !bytes.Equal(CmdRTS[:1], cmd[:1]) {
-		log.Fatalf("expected command: %x. received command: %x", CmdRTS, cmd)
+		log.Fatalf("pkg bluetooth; expected command: %x. received command: %x", CmdRTS, cmd)
 	}
-	log.Trace("Sending CTS")
+	log.Trace("pkg bluetooth; Sending CTS")
 
 	b.WriteCmd(CmdCTS)
 
@@ -366,7 +366,7 @@ func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) 
 		if i == expectedIndex {
 			buf.Write(data[1:20])
 		} else {
-			log.Warnf("sending NACK, packet index is wrong")
+			log.Warnf("pkg bluetooth; sending NACK, packet index is wrong")
 			buf.Write(data[:])
 			CmdNACK[1] = byte(expectedIndex)
 			b.WriteCmd(CmdNACK)
@@ -383,7 +383,7 @@ func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) 
 		checksum = data[2:6]
 		buf.Write(data[6 : len+6])
 	}
-	log.Tracef("One extra: %t", oneExtra)
+	log.Tracef("pkg bluetooth; One extra: %t", oneExtra)
 	if oneExtra {
 		data, _ := b.ReadData()
 		buf.Write(data[2 : data[1]+2])
@@ -391,8 +391,8 @@ func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) 
 	bytes := buf.Bytes()
 	sum := crc32.ChecksumIEEE(bytes)
 	if binary.BigEndian.Uint32(checksum) != sum {
-		log.Warnf("checksum missmatch. checksum is: %x. want: %x", sum, checksum)
-		log.Warnf("data: %s", hex.EncodeToString(bytes))
+		log.Warnf("pkg bluetooth; checksum missmatch. checksum is: %x. want: %x", sum, checksum)
+		log.Warnf("pkg bluetooth; data: %s", hex.EncodeToString(bytes))
 
 		b.WriteCmd(CmdFail)
 		return nil, errors.New("checksum missmatch")
@@ -401,7 +401,7 @@ func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) 
 	b.WriteCmd(CmdSuccess)
 
 	msg, _err := message.Unmarshal(bytes)
-	log.Tracef("Received message:", spew.Sdump(msg))
+	log.Tracef("pkg bluetooth; Received message:", spew.Sdump(msg))
 
 	return msg, _err
 }
