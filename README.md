@@ -2,7 +2,7 @@
 
 Fake pod implementation
 
-This was forked to loopnlearn as part of the development for dash-pods with iOS. 
+This was forked to loopnlearn as part of the development for dash-pods with iOS.
 * The original 0pen-dash repository from which this was forked was removed by the owner.
 
 Requirements:
@@ -14,24 +14,37 @@ Requirements:
 
 ## Build on the pi
 
-Log on the pi and type the following commands, starting at {your_path}:
+Log on the pi and type the following commands, starting at {your_path}/pod:
 ```
-cd pod
 go build
 sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
 ```
 
 ## Run simulator on the pi
 
+The simulator runs until aborted with a control-C. It may error out unexpectedly. Just restart it and it should reconnect as if it is the same pod (do not use the `-fresh` flag in this case.)
+
+When in doubt, control-C and restart it.
+
 To pair a new simulated dash pod:
 ```
 ./pod -fresh
+```
+
+Wait a few seconds for these two messages before attempting to pair the simulated pod:
+```
+enabled notifications for CMD:
+enabled notifications for DATA:
 ```
 
 To restore communication with an existing simulated dash pod:
 ```
 ./pod
 ```
+
+To change the reporting level, add one of these two flags:
+* `-v` to make reporting more verbose
+* `-q` to make reporting less verbose (recommended)
 
 # Original README.md
 
@@ -90,8 +103,8 @@ When running with `-fresh`, the state will be saved, so running it twice(first w
 Tested on `Raspberry Pi 3B+` running `Raspbian 10`
 
 ```
-GOARCH=arm go build; 
-ssh pi 'killall pod'; 
+GOARCH=arm go build;
+ssh pi 'killall pod';
 scp pod pi:~/  
 ssh pi " sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod; ./pod"
 ```
