@@ -65,11 +65,11 @@ func New(adapterID string) (*Ble, error) {
 
 	d.Handle(
 		gatt.CentralConnected(func(c gatt.Central) {
-			fmt.Println("pkg bluetooth; connect: ", c.ID())
+			fmt.Println("pkg bluetooth; ** connect: ", c.ID())
 			b.StopMessageLoop()
 		}),
 		gatt.CentralDisconnected(func(c gatt.Central) {
-			log.Fatalf("pkg bluetooth; disconnect: %s", c.ID())
+			log.Fatalf("pkg bluetooth; ** disconnect: %s", c.ID())
 		}),
 	)
 
@@ -116,6 +116,7 @@ func New(adapterID string) (*Ble, error) {
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
 					log.Infof("pkg bluetooth; enabled notifications for DATA: %s", r.Central.ID())
+					log.Infof("     *** OK to send commands from the phone app ***")
 					go func() {
 						for {
 							if n.Done() {
