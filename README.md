@@ -22,29 +22,43 @@ sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
 
 ## Run simulator on the pi
 
-The simulator runs until aborted with a control-C. It may error out unexpectedly. Just restart it and it should reconnect as if it is the same pod (do not use the `-fresh` flag in this case.)
+The simulator runs until 
+* aborted with a control-C
+* pod is deactivated on the phone
+* quit out of phone app after establishing BLE connection
+ 
+The simulator may error out unexpectedly. Just restart it and it should reconnect with the app (do not use the `-fresh` flag in this case.)
 
 When in doubt, control-C and restart it.
 
 To pair a new simulated dash pod:
 ```
-./pod -fresh
+./pod -fresh -q
 ```
 
-Wait a few seconds for these two messages before attempting to pair the simulated pod:
+Wait until getting this notification before attempting to pair with the app:
 ```
 enabled notifications for CMD:
 enabled notifications for DATA:
+*** OK to send commands from the phone app ***
 ```
 
-To restore communication with an existing simulated dash pod:
+To restore communication with an existing simulated dash pod and wait for the messages shown above:
 ```
-./pod
+./pod -q
 ```
 
 To change the reporting level, add one of these two flags:
-* `-v` to make reporting more verbose
+* `-v` to make reporting more verbose (Trace Level)
 * `-q` to make reporting less verbose (recommended)
+* no extra flag - medium verbose (Debug Level)
+
+Note that quitting the app will cause the following message:
+```
+FATA[####] pkg bluetooth; ** disconnect:
+```
+
+Simple restore communication as stated above.
 
 # Original README.md
 
