@@ -57,37 +57,38 @@ type CommandReader struct {
 func Unmarshal(data []byte) (Command, error) {
 	var err error
 	if len(data) < 10 {
-		return nil, fmt.Errorf("command is too short: %x", data)
+		return nil, fmt.Errorf("pkg command; command is too short: %x", data)
 	}
 	if string(data[:5]) != "S0.0=" {
-		return nil, fmt.Errorf("command should start with S0.0= %x", data)
+		return nil, fmt.Errorf("pkg command; command should start with S0.0= %x", data)
 	}
 	n := len(data)
 	if string(data[n-5:]) != ",G0.0" {
-		return nil, fmt.Errorf("command should end with ,G0.0 %x", data)
+		return nil, fmt.Errorf("pkg command; command should end with ,G0.0 %x", data)
 	}
 	l := int(data[5])<<8 | int(data[6])
 	if l != n-7-5 {
-		return nil, fmt.Errorf("invalid data length: %d :: %d :: %x", l, n-7-5, data)
+		return nil, fmt.Errorf("pkg command; invalid data length: %d :: %d :: %x", l, n-7-5, data)
 
 	}
 	data = data[5+2 : n-5] // remove unused strings&length
 	n = len(data)
 	if n < 6 {
-		return nil, fmt.Errorf("command too short: %x", data)
+		return nil, fmt.Errorf("pkg command; command too short: %x", data)
 	}
 
-	log.Tracef("command data: %x", data)
+	log.Tracef("pkg command; command data: %x", data)
 	id := data[:4]
 	var lsf uint16 = uint16(data[4])<<8 | uint16(data[5])
 	length := int(lsf & 1023)
 	seq := uint8((lsf >> 10) & 0x0F)
 	if length+6+2 != n {
-		return nil, fmt.Errorf("invalid command length %d :: %d. %x", n, length+6+2, data)
+		return nil, fmt.Errorf("pkg command; invalid command length %d :: %d. %x", n, length+6+2, data)
 	}
 	// crc := data[n-2:]
 	t := Type(data[6])
-	log.Infof(" Command: 0x%2.2x: %-15s, HEX: 0x%x", t, CommandName[t], data)
+	log.Infof("pkg command; Command: 0x%2.2x: %s", t, CommandName[t])
+	log.Debugf("pkg command; Command: HEX: 0x%x", data)
 	// TODO verify CRC, CRC always last 4 of HEX
 	data = data[7 : n-2]
 	var ret Command
