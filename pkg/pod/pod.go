@@ -1,6 +1,8 @@
 package pod
 
 import (
+	"time"
+
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
@@ -13,6 +15,17 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	log "github.com/sirupsen/logrus"
 )
+
+type PodMsgBody struct {
+	// This contains the decrytped message body
+	//   MsgBodyCommand: incoming after stripping off address and crc
+	//   MsgBodyResponse: outgoing before adding address and crc
+	//      not sure how to get this to this level and don't really need it
+	//   DeactivateFlag: set to true once 0x1c input is detected
+	MsgBodyCommand  []byte
+	// MsgBodyResponse []byte
+	DeactivateFlag	bool
+}
 
 type Pod struct {
 	ble   *bluetooth.Ble
@@ -41,7 +54,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) (*Pod) {
 }
 
 func (p *Pod) StartAcceptingCommands() {
-	log.Infof("pkg pod; got a new connection, start accepting commands")
+	log.Infof("pkg pod; got a new BLE connection")
 	firstCmd, _ := p.ble.ReadCmd()
 	log.Infof("pkg pod; got first command: as string: %s, as HEX 0x%x", firstCmd, firstCmd)
 
@@ -151,13 +164,27 @@ func (p *Pod) EapAka(msg *message.Message) {
 		log.Fatalf("pkg pod; Could not save the pod state: %s", err)
 	}
 
-	p.CommandLoop()
+	// initialize pMsg
+	var pMsg PodMsgBody
+	pMsg.MsgBodyCommand = make([]byte, 16)
+	// pMsg.MsgBodyResponse = make([]byte, 16)
+	pMsg.DeactivateFlag = false
+	log.Tracef("pkd pod; pMsg initialized: %+v", pMsg)
+
+	p.CommandLoop(pMsg)
 }
 
-func (p *Pod) CommandLoop() {
+func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 	var lastMsgSeq uint8 = 0
+	var data []byte = make([]byte, 4)
+	var n int = 0
 	for {
-		log.Debugf("  *** pkg pod; Waiting for the next command")
+		if (pMsg.DeactivateFlag) {
+			log.Infof("pkg pod; Pod was deactivated. Use -fresh for new pod")
+			time.Sleep(1 * time.Second)
+			log.Exit(0)
+		}
+		log.Infof("pkg pod;   *** Waiting for the next command ***")
 		msg, _ := p.ble.ReadMessage()
 		log.Tracef("pkg pod; got command message: %s", spew.Sdump(msg))
 
@@ -183,6 +210,20 @@ func (p *Pod) CommandLoop() {
 			log.Fatalf("pkg pod; could not get command header data: %s", err)
 		}
 		p.state.CmdSeq = cmdSeq
+
+		log.Debugf("pkd pod; cmd: 0x%x", decrypted.Payload)
+		data = decrypted.Payload
+		n = len(data)
+		log.Debugf("pkg pod; len = %d", n)
+		if (n<16) {
+			log.Fatalf("pkg pod; decrypted.Payload too short to contain PodMsgBody")
+		}
+		pMsg.MsgBodyCommand = data[13 : n-5]
+		if data[13]==0x1c {
+			pMsg.DeactivateFlag = true
+		}
+		log.Infof("pkg pod; command pod message body = 0x%x", pMsg.MsgBodyCommand)
+
 		rsp, err := cmd.GetResponse()
 		if err != nil {
 			log.Fatalf("pkg pod; could not get command response: %s", err)
