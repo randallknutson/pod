@@ -102,7 +102,13 @@ func Unmarshal(data []byte) (Command, error) {
 	case PROGRAM_INSULIN:
 		ret, err = UnmarshalProgramInsulin(data)
 	case GET_STATUS:
-		ret, err = UnmarshalGetStatus(data)
+		if (data[1]==0) {
+			ret, err = UnmarshalGetStatus(data)
+		} else if (data[1]==2) {
+			ret, err = UnmarshalType2Status(data)
+		} else {
+			ret, err = UnmarshalType5xStatus(data)
+		}
 	case SILENCE_ALERTS:
 		ret, err = UnmarshalSilenceAlerts(data)
 	case DEACTIVATE:
