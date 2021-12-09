@@ -7,7 +7,6 @@ import (
 	"github.com/avereha/pod/pkg/command"
 	"github.com/avereha/pod/pkg/eap"
 	"github.com/avereha/pod/pkg/pair"
-	"github.com/avereha/pod/pkg/message"
 
 	"github.com/avereha/pod/pkg/encrypt"
 	"github.com/avereha/pod/pkg/response"
@@ -32,7 +31,7 @@ type Pod struct {
 	state *PODState
 }
 
-func New(ble *bluetooth.Ble, stateFile string, freshState bool) (*Pod) {
+func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
 	state := &PODState{
@@ -61,8 +60,7 @@ func (p *Pod) StartAcceptingCommands() {
 	p.ble.StartMessageLoop()
 
 	if p.state.LTK != nil { // paired, just establish new session
-		msg, _ := p.ble.ReadMessageExpectingCommand(firstCmd)
-		p.EapAka(msg)
+		p.EapAka()
 	} else {
 		p.StartActivation() // not paired, get the LTK
 	}
@@ -121,17 +119,14 @@ func (p *Pod) StartActivation() {
 	p.state.EapAkaSeq = 1
 	p.state.Save()
 
-	msg, err = p.ble.ReadMessage()
-	if err != nil {
-	       log.Fatalf("pkg pod; could not get EapAka msg %s", err)
-	}
-	p.EapAka(msg)
+	p.EapAka()
 }
 
-func (p *Pod) EapAka(msg *message.Message) {
+func (p *Pod) EapAka() {
 
 	session := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
 
+	msg, _ := p.ble.ReadMessage()
 	err := session.ParseChallenge(msg)
 	if err != nil {
 		log.Fatalf("pkg pod; error parsing the EAP-AKA challenge: %s", err)

@@ -237,7 +237,7 @@ func (b *Ble) loop(stop chan bool) {
 		case msg := <-b.messageOutput:
 			b.writeMessage(msg)
 		case cmd := <-b.cmdInput:
-			msg, err := b.ReadMessageExpectingCommand(cmd)
+			msg, err := b.readMessage(cmd)
 			if err != nil {
 				log.Fatalf("pkg bluetooth; error reading message: %s", err)
 			}
@@ -334,7 +334,7 @@ func (b *Ble) writeMessage(msg *message.Message) {
 	b.expectCommand(CmdSuccess)
 }
 
-func (b *Ble) ReadMessageExpectingCommand(cmd Packet) (*message.Message, error) {
+func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
 
