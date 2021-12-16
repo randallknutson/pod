@@ -88,7 +88,7 @@ func Unmarshal(data []byte) (Command, error) {
 	// crc := data[n-2:]
 	t := Type(data[6])
 	log.Infof("pkg command; Command: 0x%2.2x: %s", t, CommandName[t])
-	log.Debugf("pkg command; Command: HEX: 0x%x", data)
+	log.Infof("pkg command; Command: HEX, %x", data)
 	// TODO verify CRC, CRC always last 4 of HEX
 	data = data[7 : n-2]
 	var ret Command

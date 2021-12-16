@@ -55,7 +55,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 func (p *Pod) StartAcceptingCommands() {
 	log.Infof("pkg pod; got a new BLE connection")
 	firstCmd, _ := p.ble.ReadCmd()
-	log.Infof("pkg pod; got first command: as string: %s, as HEX 0x%x", firstCmd, firstCmd)
+	log.Infof("pkg pod; got first command: as string: %s", firstCmd)
 
 	p.ble.StartMessageLoop()
 

@@ -48,7 +48,7 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	buf.WriteByte(byte(header))
 	buf.Write(payload)
 	buf.Write(crc.CRC16(buf.Bytes()))
-	log.Tracef("response payloadWithHeaderAndCRC: %x", buf.Bytes())
+	log.Infof("pkg response; simResp, %x", buf.Bytes())
 	return buf.Bytes(), nil
 }
 

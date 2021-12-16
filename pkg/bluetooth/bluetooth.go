@@ -87,7 +87,7 @@ func New(adapterID string) (*Ble, error) {
 			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("received CMD:  %x", data)
+					log.Tracef("received CMD,  %x", data)
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.cmdInput <- Packet(ret)
@@ -134,7 +134,7 @@ func New(adapterID string) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("pkg bluetooth; received DATA [%x] -- %d", data, len(data))
+					log.Tracef("pkg bluetooth; received DATA,%x, -- %d", data, len(data))
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)

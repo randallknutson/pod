@@ -20,7 +20,7 @@ func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
 	ret := &GetVersion{}
 	ret.TheOtherID = make([]byte, 4)
 	copy(ret.TheOtherID, data[1:])
-	log.Debugf("GetVersion, 0x07, received, data 0x%x", data)
+	log.Debugf("GetVersion, 0x07, rest of podMsgBody: 0x%x", data)
 	return ret, nil
 }
 
