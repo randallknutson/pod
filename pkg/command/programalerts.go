@@ -13,7 +13,7 @@ type ProgramAlerts struct {
 func UnmarshalProgramAlerts(data []byte) (*ProgramAlerts, error) {
 	ret := &ProgramAlerts{}
 	// TODO deserialize this command
-	log.Debugf("ProgramAlerts, 0x19, received, data 0x%x", data)
+	log.Debugf("ProgramAlerts, 0x19, received, data %x", data)
 	return ret, nil
 }
 

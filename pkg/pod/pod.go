@@ -162,7 +162,6 @@ func (p *Pod) EapAka() {
 	// initialize pMsg
 	var pMsg PodMsgBody
 	pMsg.MsgBodyCommand = make([]byte, 16)
-	// pMsg.MsgBodyResponse = make([]byte, 16)
 	pMsg.DeactivateFlag = false
 	log.Tracef("pkd pod; pMsg initialized: %+v", pMsg)
 
@@ -206,18 +205,18 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		p.state.CmdSeq = cmdSeq
 
-		log.Debugf("pkd pod; cmd: 0x%x", decrypted.Payload)
+		log.Debugf("pkd pod; cmd: %x", decrypted.Payload)
 		data = decrypted.Payload
 		n = len(data)
 		log.Debugf("pkg pod; len = %d", n)
 		if (n<16) {
-			log.Fatalf("pkg pod; decrypted.Payload too short to contain PodMsgBody")
+			log.Fatalf("pkg pod; decrypted. Payload too short")
 		}
 		pMsg.MsgBodyCommand = data[13 : n-5]
 		if data[13]==0x1c {
 			pMsg.DeactivateFlag = true
 		}
-		log.Infof("pkg pod; command pod message body = 0x%x", pMsg.MsgBodyCommand)
+		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
 		rsp, err := cmd.GetResponse()
 		if err != nil {

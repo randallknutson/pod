@@ -32,7 +32,7 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("pkg response:  reply message body = 0x%x", payload)
+	log.Debugf("pkg response:  reply message body = %x", payload)
 
 	// write header
 	buf.Write(responseID) // 4 bytes

@@ -13,7 +13,7 @@ import (
 func UnmarshalDeactivate(data []byte) (*Deactivate, error) {
 	ret := &Deactivate{}
 	// TODO deserialize this command
-	log.Debugf("Deactivate, 0x1c, received, data 0x%x", data)
+	log.Debugf("Deactivate, 0x1c, received, data %x", data)
 	return ret, nil
 }
 

@@ -12,7 +12,7 @@ type GetType5xStatus struct {
 
 func UnmarshalType5xStatus(data []byte) (*GetType5xStatus, error) {
 	ret := &GetType5xStatus{}
-	log.Debugf("GetStatus, 0x0e, received, type 0x%x, data 0x%x", data[1], data)
+	log.Debugf("GetStatus, 0x0e, received, type %x, data %x", data[1], data)
 	return ret, nil
 }
 

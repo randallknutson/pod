@@ -13,7 +13,7 @@ type SetUniqueID struct {
 func UnmarshalSetUniqueID(data []byte) (*SetUniqueID, error) {
 	ret := &SetUniqueID{}
 	// TODO deserialize this command
-	log.Debugf("SetUniqueID, 0x03, received, data 0x%x", data)
+	log.Debugf("SetUniqueID, 0x03, received, data %x", data)
 	return ret, nil
 }
 

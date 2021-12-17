@@ -13,7 +13,7 @@ type CnfgDelivFlag struct {
 func UnmarshalCnfgDelivFlag(data []byte) (*CnfgDelivFlag, error) {
 	ret := &CnfgDelivFlag{}
 	// TODO deserialize this command
-	log.Debugf("CnfgDelivFlag, 0x08, received, data 0x%x", data)
+	log.Debugf("CnfgDelivFlag, 0x08, received, data %x", data)
 	return ret, nil
 }
 

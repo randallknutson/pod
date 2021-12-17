@@ -12,7 +12,7 @@ type GetType2Status struct {
 
 func UnmarshalType2Status(data []byte) (*GetType2Status, error) {
 	ret := &GetType2Status{}
-	log.Debugf("GetStatus, 0x0e, received, type 0x%x, data 0x%x", data[1], data)
+	log.Debugf("GetStatus, 0x0e, received, type %x, data %x", data[1], data)
 	return ret, nil
 }
 
