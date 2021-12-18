@@ -27,12 +27,28 @@ type ResponseMetadata struct {
 func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	var header uint16
+	var msgType uint16
+	var priorSeq uint8
 
 	payload, err := rsp.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("pkg response:  reply message body = %x", payload)
+
+	msgType = uint16(payload[0])
+	priorSeq = seq - 1
+	// Special treatment for 0x1d response
+	if (msgType == 0x1d) {
+		//     The $1D status response has the following form:
+		//        byte# 00 01 02 03 04 05 06070809
+		//              1d SS 0P PP SN NN AATTTTRR
+		//        the S nibble of byte 04 must be priorSeq
+		log.Debugf("pkg response: message body (before S nibble update) = %x", payload)
+		log.Debugf("pkg response: msgType 0x%2.2x; priorSeq %x; seq %x", msgType, priorSeq, seq)
+		payload[4] = (0x0F & payload[4])  | (0xF0 & (priorSeq << 4))
+	}
+
+	log.Debugf("pkg response: message body to encrypt %x", payload)
 
 	// write header
 	buf.Write(responseID) // 4 bytes
@@ -48,7 +64,9 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	buf.WriteByte(byte(header))
 	buf.Write(payload)
 	buf.Write(crc.CRC16(buf.Bytes()))
-	log.Infof("pkg response; simResp, %x", buf.Bytes())
+
+	log.Infof("pkg response; priorSeq 0x%x; msgType 0x%2.2x; simResp, %x", priorSeq, msgType, buf.Bytes())
+
 	return buf.Bytes(), nil
 }
 
