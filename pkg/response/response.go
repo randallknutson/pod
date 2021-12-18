@@ -46,7 +46,7 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 		//        the s bits of pssssnnn must be priorSeq
 		log.Debugf("pkg response: message body (before s bit update) = %x", payload)
 		log.Debugf("pkg response: msgType 0x%2.2x; priorSeq %x; seq %x", msgType, priorSeq, seq)
-		payload[4] = (payload[4] & 0x87)  | (0xFF & (priorSeq << 3))
+		payload[4] = (payload[4] & 0x87)  | (0x78 & (priorSeq << 3))
 	}
 
 	log.Debugf("pkg response: message body to encrypt %x", payload)
