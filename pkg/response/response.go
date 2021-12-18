@@ -42,10 +42,11 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 		//     The $1D status response has the following form:
 		//        byte# 00 01 02 03 04 05 06070809
 		//              1d SS 0P PP SN NN AATTTTRR
-		//        the S nibble of byte 04 must be priorSeq
-		log.Debugf("pkg response: message body (before S nibble update) = %x", payload)
+		// 0PPPSNNN dword = 0000 pppp pppp pppp psss snnn nnnn nnnn
+		//        the s bits of pssssnnn must be priorSeq
+		log.Debugf("pkg response: message body (before s bit update) = %x", payload)
 		log.Debugf("pkg response: msgType 0x%2.2x; priorSeq %x; seq %x", msgType, priorSeq, seq)
-		payload[4] = (0x0F & payload[4])  | (0xF0 & (priorSeq << 4))
+		payload[4] = (payload[4] & 0x87)  | (0xFF & (priorSeq << 3))
 	}
 
 	log.Debugf("pkg response: message body to encrypt %x", payload)
