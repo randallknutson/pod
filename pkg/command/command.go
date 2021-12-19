@@ -130,7 +130,7 @@ func Unmarshal(data []byte) (Command, error) {
 	case GET_STATUS:
 		if (data[1]==0) {
 			ret, err = UnmarshalGetStatus(data)
-		} else if (data[1]==2) {
+		} else if (data[1]&0x2 == 0x2) {
 			ret, err = UnmarshalType2Status(data)
 		} else {
 			ret, err = UnmarshalType5xStatus(data)
