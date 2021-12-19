@@ -105,7 +105,11 @@ func Unmarshal(data []byte) (Command, error) {
 		ret, err = UnmarshalSetUniqueID(data)
 		PodProgress = 3  // set with -fresh
 	case PROGRAM_ALERTS:
-		ret, err = UnmarshalProgramAlerts(data)
+		if PodProgress < 4 {
+			ret, err = UnmarshalProgramAlertsBeforePrime(data)
+		} else {
+			ret, err = UnmarshalProgramAlerts(data)
+		}
 	case PROGRAM_INSULIN:
 		if (PodProgress < 4) {
 			// this must be the prime command
