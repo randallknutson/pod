@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 )
 
+// This is the special case - sent in response to the prime command
+
 type StatusResponsePrime struct {
 	Seq uint16
 }

@@ -12,11 +12,16 @@ import (
 //   PodProgress = 8: response, _ := hex.DecodeString("1D18001F7000000023FF")
 //   Default        : response, _ := hex.DecodeString("1D1800A02800000463FF")
 
+// From actual pod messages, expected CRC: 0x00FB for seqNumber = 9 for a msgBody of:
+//    "1d58001cc014000013ff"
+
 type GeneralStatusResponse struct {
 	Seq uint16
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
-	response, _ := hex.DecodeString("1D1800A02800000463FF") // Default
+	response, _ := hex.DecodeString("1d58001cc014000013ff") // Default
+
+	// response, _ := hex.DecodeString("1D1800A02800000463FF") // Previous Default
 	return response, nil
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 )
 
+// This is the special case - sent after the initial basal schedule is programmed
+
 type StatusResponseSchedule struct {
 	Seq uint16
 }

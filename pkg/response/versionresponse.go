@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 )
 
+// This is the special case - sent with the 0x0115 response to 0x07 message
+
 type VersionResponse struct {
 	Seq uint16
 }

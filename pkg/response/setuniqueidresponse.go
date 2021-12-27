@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 )
 
+// This is the special case - sent with the 0x011B response to 0x03 message
+
 type SetUniqueID struct {
 	Seq uint16
 }
