@@ -5,6 +5,8 @@ import (
 )
 
 // This is the default for most 0x1d response
+//   Note - this response cannot have immediate_bolus_active =   True
+//          if true, Loop will refuse to bolus and won't see green loop with simulator
 // Special cases are in statusresponseXXX modules
 //   PodProgress = 4: response, _ := hex.DecodeString("1D4400004034000003FF")
 //   PodProgress = 6: response, _ := hex.DecodeString("1D160016D000400023FF")
@@ -20,8 +22,8 @@ type GeneralStatusResponse struct {
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
-	response, _ := hex.DecodeString("1d58001cc014000013ff") // Default
+	// response, _ := hex.DecodeString("1d58001cc014000013ff") // immediate_bolus_active is true
 
-	// response, _ := hex.DecodeString("1D1800A02800000463FF") // Previous Default
+	response, _ := hex.DecodeString("1D1800A02800000463FF") // Default
 	return response, nil
 }
