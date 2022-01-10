@@ -11,6 +11,6 @@ type GeneralStatusResponseBeforePrime struct {
 }
 
 func (r *GeneralStatusResponseBeforePrime) Marshal() ([]byte, error) {
-	response, _ := hex.DecodeString("1D0300003000000003FF") // Default
+	response, _ := hex.DecodeString("1D0300002000000003FF") // Default
 	return response, nil
 }

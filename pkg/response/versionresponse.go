@@ -11,7 +11,7 @@ type VersionResponse struct {
 }
 
 func (r *VersionResponse) Marshal() ([]byte, error) {
-	response, _ := hex.DecodeString("0115040A00010300040208146CC1000954D400FFFFFFFF")
+	response, _ := hex.DecodeString("0115040A00010300040208146DB10006E45100FFFFFFFF")
 
 	return response, nil
 }
