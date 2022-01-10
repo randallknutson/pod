@@ -129,6 +129,9 @@ func Unmarshal(data []byte) (Command, error) {
 		}
 	case GET_STATUS:
 		if (data[1]==0) {
+			if (PodProgress == 7) {
+				PodProgress = 8
+			}
 			ret, err = UnmarshalGetStatus(data)
 		} else if (data[1]&0x2 == 0x2) {
 			ret, err = UnmarshalType2Status(data)
