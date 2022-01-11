@@ -23,6 +23,7 @@ const (
 	DEACTIVATE         Type = 0x1c
 	PROGRAM_BEEPS      Type = 0x1e
 	STOP_DELIVERY      Type = 0x1f
+	CNFG_DELIV_FLAG    Type = 0x08 // Loop uses configure delivery flag
 )
 
 var (
@@ -39,6 +40,7 @@ var (
 		DEACTIVATE:         "DEACTIVATE",
 		PROGRAM_BEEPS:      "PROGRAM_BEEPS",
 		STOP_DELIVERY:      "STOP_DELIVERY",
+		CNFG_DELIV_FLAG:    "CNFG_DELIV_FLAG",
 	}
 )
 
@@ -52,62 +54,111 @@ type CommandReader struct {
 	Data []byte // keep it simple for now
 }
 
+// PodProgress used to select appropriate the 0x1d response
+// initialize to 8 to support restart of pod simulator
+// when started with -fresh flag, modified by the 0x07: GET_VERSION, etc.
+var PodProgress = 8
+
 func Unmarshal(data []byte) (Command, error) {
 	var err error
 	if len(data) < 10 {
-		return nil, fmt.Errorf("command is too short: %x", data)
+		return nil, fmt.Errorf("pkg command; command is too short: %x", data)
 	}
 	if string(data[:5]) != "S0.0=" {
-		return nil, fmt.Errorf("command should start with S0.0= %x", data)
+		return nil, fmt.Errorf("pkg command; command should start with S0.0= %x", data)
 	}
 	n := len(data)
 	if string(data[n-5:]) != ",G0.0" {
-		return nil, fmt.Errorf("command should end with ,G0.0 %x", data)
+		return nil, fmt.Errorf("pkg command; command should end with ,G0.0 %x", data)
 	}
 	l := int(data[5])<<8 | int(data[6])
 	if l != n-7-5 {
-		return nil, fmt.Errorf("invalid data length: %d :: %d :: %x", l, n-7-5, data)
+		return nil, fmt.Errorf("pkg command; invalid data length: %d :: %d :: %x", l, n-7-5, data)
 
 	}
 	data = data[5+2 : n-5] // remove unused strings&length
 	n = len(data)
 	if n < 6 {
-		return nil, fmt.Errorf("command too short: %x", data)
+		return nil, fmt.Errorf("pkg command; command too short: %x", data)
 	}
 
-	log.Tracef("command data: %x", data)
+	log.Tracef("pkg command; command data: %x", data)
 	id := data[:4]
 	var lsf uint16 = uint16(data[4])<<8 | uint16(data[5])
 	length := int(lsf & 1023)
 	seq := uint8((lsf >> 10) & 0x0F)
 	if length+6+2 != n {
-		return nil, fmt.Errorf("invalid command length %d :: %d. %x", n, length+6+2, data)
+		return nil, fmt.Errorf("pkg command; invalid command length %d :: %d. %x", n, length+6+2, data)
 	}
 	crc := data[n-2:]
+	log.Tracef("pkg command; CRC = %x", crc)
 	t := Type(data[6])
-	log.Debugf("got command. CRC: %x. Type: %x :: %s", crc, t, CommandName[t])
-	// TODO verify CRC
+	log.Infof("pkg command; 0x%2.2x; %s; HEX, %x", t, CommandName[t], data)
+
 	data = data[7 : n-2]
 	var ret Command
 	switch t {
 	case GET_VERSION:
 		ret, err = UnmarshalGetVersion(data)
+		PodProgress = 2  // set with -fresh
 	case SET_UNIQUE_ID:
 		ret, err = UnmarshalSetUniqueID(data)
+		PodProgress = 3  // set with -fresh
 	case PROGRAM_ALERTS:
-		ret, err = UnmarshalProgramAlerts(data)
+		if PodProgress < 4 {
+			ret, err = UnmarshalProgramAlertsBeforePrime(data)
+		} else {
+			ret, err = UnmarshalProgramAlerts(data)
+		}
 	case PROGRAM_INSULIN:
-		ret, err = UnmarshalProgramInsulin(data)
+		if (PodProgress < 4) {
+			// this must be the prime command
+			PodProgress = 4
+			ret, err = UnmarshalProgramInsulinPrime(data)
+		} else if (PodProgress < 6) {
+			// this must be the program scheduled basal command
+			PodProgress = 6
+			ret, err = UnmarshalProgramInsulinSchedule(data)
+		} else if (PodProgress == 6) {
+			// this must be the insert cannula command
+			PodProgress = 7
+			ret, err = UnmarshalProgramInsulinInsert(data)
+		} else {
+			PodProgress = 8
+			ret, err = UnmarshalProgramInsulin(data)
+		}
 	case GET_STATUS:
-		ret, err = UnmarshalGetStatus(data)
+		if (data[1]==0) {
+			if (PodProgress == 7) {
+				PodProgress = 8
+			}
+			ret, err = UnmarshalGetStatus(data)
+		} else if (data[1]&0x2 == 0x2) {
+			ret, err = UnmarshalType2Status(data)
+		} else {
+			ret, err = UnmarshalType5xStatus(data)
+		}
+	case SILENCE_ALERTS:
+		ret, err = UnmarshalSilenceAlerts(data)
+	case DEACTIVATE:
+		ret, err = UnmarshalDeactivate(data)
+	case PROGRAM_BEEPS:
+		ret, err = UnmarshalProgramBeeps(data)
+	case STOP_DELIVERY:
+		ret, err = UnmarshalStopDelivery(data)
+	case CNFG_DELIV_FLAG:
+		ret, err = UnmarshalCnfgDelivFlag(data)
 	default:
 		ret, err = UnmarshalNack(data)
 	}
+
 	if err != nil {
 		return nil, err
 	}
 	if err := ret.SetHeaderData(seq, id); err != nil {
 		return nil, err
 	}
+
+	log.Infof("pkg command; PodProgress = %d", PodProgress)
 	return ret, nil
 }
