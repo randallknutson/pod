@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-	type ProgramBeeps struct {
+type ProgramBeeps struct {
 	Seq uint8
 	ID  []byte
 }
@@ -30,4 +30,12 @@ func (g *ProgramBeeps) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *ProgramBeeps) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *ProgramBeeps) GetPayload() Payload {
+	return nil
+}
+
+func (g *ProgramBeeps) GetType() Type {
+	return PROGRAM_BEEPS
 }

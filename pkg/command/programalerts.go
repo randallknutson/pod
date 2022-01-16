@@ -31,3 +31,11 @@ func (g *ProgramAlerts) SetHeaderData(seq uint8, id []byte) error {
 func (g *ProgramAlerts) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *ProgramAlerts) GetPayload() Payload {
+	return nil
+}
+
+func (g *ProgramAlerts) GetType() Type {
+	return PROGRAM_ALERTS
+}
