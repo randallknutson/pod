@@ -31,3 +31,11 @@ func (g *ProgramInsulinPrime) SetHeaderData(seq uint8, id []byte) error {
 func (g *ProgramInsulinPrime) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *ProgramInsulinPrime) GetPayload() Payload {
+	return nil
+}
+
+func (g *ProgramInsulinPrime) GetType() Type {
+	return PROGRAM_INSULIN
+}

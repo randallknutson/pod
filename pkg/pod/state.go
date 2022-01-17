@@ -19,12 +19,12 @@ type PODState struct {
 
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
-	filename    string
+	Filename    string
 }
 
 func NewState(filename string) (*PODState, error) {
 	var ret PODState
-	ret.filename = filename
+	ret.Filename = filename
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -37,10 +37,10 @@ func NewState(filename string) (*PODState, error) {
 }
 
 func (p *PODState) Save() error {
-	log.Debugf("Saving state to file: %s", p.filename)
+	log.Debugf("Saving state to file: %s", p.Filename)
 	data, err := toml.Marshal(p)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(p.filename, data, 0777)
+	return ioutil.WriteFile(p.Filename, data, 0777)
 }

@@ -31,3 +31,11 @@ func (g *StopDelivery) SetHeaderData(seq uint8, id []byte) error {
 func (g *StopDelivery) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *StopDelivery) GetPayload() Payload {
+	return nil
+}
+
+func (g *StopDelivery) GetType() Type {
+	return STOP_DELIVERY
+}

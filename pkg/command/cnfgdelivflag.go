@@ -31,3 +31,11 @@ func (g *CnfgDelivFlag) SetHeaderData(seq uint8, id []byte) error {
 func (g *CnfgDelivFlag) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *CnfgDelivFlag) GetPayload() Payload {
+	return nil
+}
+
+func (g *CnfgDelivFlag) GetType() Type {
+	return CNFG_DELIV_FLAG
+}

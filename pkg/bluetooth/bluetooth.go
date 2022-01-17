@@ -36,6 +36,7 @@ type Ble struct {
 	messageOutput chan *message.Message
 
 	stopLoop chan bool
+	device   *gatt.Device
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -48,7 +49,12 @@ var DefaultServerOptions = []gatt.Option{
 	}),
 }
 
-func New(adapterID string) (*Ble, error) {
+func New(adapterID string, podId []byte) (*Ble, error) {
+	d, err := gatt.NewDevice(DefaultServerOptions...)
+	if err != nil {
+		log.Fatalf("pkg bluetooth; failed to open device, err: %s", err)
+	}
+
 	b := &Ble{
 		dataInput:     make(chan Packet, 5),
 		cmdInput:      make(chan Packet, 5),
@@ -56,11 +62,7 @@ func New(adapterID string) (*Ble, error) {
 		cmdOutput:     make(chan Packet, 5),
 		messageInput:  make(chan *message.Message, 5),
 		messageOutput: make(chan *message.Message, 2),
-	}
-
-	d, err := gatt.NewDevice(DefaultServerOptions...)
-	if err != nil {
-		log.Fatalf("pkg bluetooth; failed to open device, err: %s", err)
+		device:        &d,
 	}
 
 	d.Handle(
@@ -145,6 +147,14 @@ func New(adapterID string) (*Ble, error) {
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
+
+			podIdServiceOne := gatt.UUID16(0xffff)
+			podIdServiceTwo := gatt.UUID16(0xfffe)
+			if podId != nil {
+				podIdServiceOne = gatt.UUID16(binary.BigEndian.Uint16(podId[0:2]))
+				podIdServiceTwo = gatt.UUID16(binary.BigEndian.Uint16(podId[2:4]))
+			}
+
 			// Advertise device name and service's UUIDs.
 			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
 				gatt.UUID16(0x4024),
@@ -152,8 +162,9 @@ func New(adapterID string) (*Ble, error) {
 				gatt.UUID16(0x2470),
 				gatt.UUID16(0x000a),
 
-				gatt.UUID16(0xffff),
-				gatt.UUID16(0xfffe),
+				podIdServiceOne,
+				podIdServiceTwo,
+
 				gatt.UUID16(0xaaaa),
 				gatt.UUID16(0xaaaa),
 				gatt.UUID16(0xaaaa),
@@ -186,6 +197,33 @@ func (b *Ble) StopMessageLoop() {
 		close(b.stopLoop)
 		b.stopLoop = nil
 	}
+}
+
+func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, first 2 usually empty
+	log.Debugf("RefreshAdvertisingWithSpecifiedId %x", id)
+	// Looking at the paypal/gatt source code, we don't need to call StopAdvertising,
+	// but just call AdvertiseNameAndServices and it should update
+
+	log.Tracef("podIdServiceOne", gatt.UUID16(binary.BigEndian.Uint16(id[0:2])))
+	log.Tracef("podIdServiceTwo", gatt.UUID16(binary.BigEndian.Uint16(id[2:4])))
+	err := (*b.device).AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
+		gatt.UUID16(0x4024),
+
+		gatt.UUID16(0x2470),
+		gatt.UUID16(0x000a),
+
+		gatt.UUID16(binary.BigEndian.Uint16(id[0:2])),
+		gatt.UUID16(binary.BigEndian.Uint16(id[2:4])),
+
+		gatt.UUID16(0xaaaa),
+		gatt.UUID16(0xaaaa),
+		gatt.UUID16(0xaaaa),
+		gatt.UUID16(0xaaaa),
+	})
+	if err != nil {
+		log.Infof("pkg bluetooth; could not re-advertise: %s", err)
+	}
+	return err
 }
 
 func (b *Ble) WriteCmd(packet Packet) error {

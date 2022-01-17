@@ -30,3 +30,12 @@ func (g *GetType2Status) SetHeaderData(seq uint8, id []byte) error {
 func (g *GetType2Status) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *GetType2Status) GetPayload() Payload {
+	return nil
+}
+
+func (g *GetType2Status) GetType() Type {
+	// TODO: Differentiate between normal, type 2 and type 5 get status
+	return GET_STATUS
+}

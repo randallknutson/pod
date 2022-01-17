@@ -38,3 +38,11 @@ func (g *GetVersion) SetHeaderData(seq uint8, id []byte) error {
 func (g *GetVersion) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *GetVersion) GetPayload() Payload {
+	return nil
+}
+
+func (g *GetVersion) GetType() Type {
+	return GET_VERSION
+}

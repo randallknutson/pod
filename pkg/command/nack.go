@@ -30,3 +30,11 @@ func (g *Nack) SetHeaderData(seq uint8, id []byte) error {
 func (g *Nack) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
 }
+
+func (g *Nack) GetPayload() Payload {
+	return nil
+}
+
+func (g *Nack) GetType() Type {
+	return NACK
+}
