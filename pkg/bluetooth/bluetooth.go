@@ -165,10 +165,11 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				podIdServiceOne,
 				podIdServiceTwo,
 
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
+				// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
+				gatt.UUID16(0x0814),
+				gatt.UUID16(0x6DB1),
+				gatt.UUID16(0x0006),
+				gatt.UUID16(0xE451),
 			})
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
@@ -215,10 +216,11 @@ func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, f
 		gatt.UUID16(binary.BigEndian.Uint16(id[0:2])),
 		gatt.UUID16(binary.BigEndian.Uint16(id[2:4])),
 
-		gatt.UUID16(0xaaaa),
-		gatt.UUID16(0xaaaa),
-		gatt.UUID16(0xaaaa),
-		gatt.UUID16(0xaaaa),
+		// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
+		gatt.UUID16(0x0814),
+		gatt.UUID16(0x6DB1),
+		gatt.UUID16(0x0006),
+		gatt.UUID16(0xE451),
 	})
 	if err != nil {
 		log.Infof("pkg bluetooth; could not re-advertise: %s", err)
