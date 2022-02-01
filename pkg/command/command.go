@@ -147,18 +147,18 @@ func Unmarshal(data []byte) (Command, error) {
 			ret, err = UnmarshalProgramInsulinSchedule(data)
 		} else if PodProgress == 6 {
 			// this must be the insert cannula command
+			PodProgress = 7
 			ret, err = UnmarshalProgramInsulinInsert(data)
 		} else {
 			ret, err = UnmarshalProgramInsulin(data)
 		}
 	case GET_STATUS:
 		if data[1] == 0 {
-			if SimulatorProgress == 6 {
-				ret, err = UnmarshalProgramInsulinInsert(data)
-				PodProgress = 7
+			if PodProgress == 8 {
+				ret, err = UnmarshalGetStatus(data)
 			} else if SimulatorProgress < 11 {
-				ret, err = UnmarshalProgramPostInsert(data)
 				PodProgress = 8
+				ret, err = UnmarshalProgramPostInsert(data)
 			} else {
 				ret, err = UnmarshalGetStatus(data)
 			}
