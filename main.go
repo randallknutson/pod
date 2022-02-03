@@ -6,6 +6,7 @@ import (
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/pod"
+	"github.com/avereha/pod/pkg/api"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -40,7 +41,13 @@ func main() {
 	}
 
 	p := pod.New(ble, *stateFile, *freshState)
-	p.StartAcceptingCommands()
+	go func() {
+		p.StartAcceptingCommands()
+	}()
+
+	log.Info("Starting API")
+	s := api.New(p)
+	s.Start()
 
 	time.Sleep(9999 * time.Second)
 }

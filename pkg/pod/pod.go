@@ -2,6 +2,8 @@ package pod
 
 import (
 	"time"
+	"sync"
+	"encoding/json"
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
@@ -29,6 +31,7 @@ type PodMsgBody struct {
 type Pod struct {
 	ble   *bluetooth.Ble
 	state *PODState
+	mtx 	sync.Mutex
 }
 
 func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
@@ -50,6 +53,14 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	}
 
 	return ret
+}
+
+func (p *Pod) GetPodStateJson() ([]byte, error) {
+	p.mtx.Lock()
+	data,error := json.Marshal(p.state)
+  p.mtx.Unlock()
+
+	return data,error
 }
 
 func (p *Pod) StartAcceptingCommands() {
