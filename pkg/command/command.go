@@ -64,18 +64,6 @@ type CommandReader struct {
 // when started with -fresh flag, modified by the 0x07: GET_VERSION, etc.
 var PodProgress = 8
 
-// use SimulatorProgress to decide which 0x1d response to use
-// warning - this is fragile - if app changes this might not work as it should
-var SimulatorProgress = 11
-// 0x07 -> 0x0115
-// 0x03 -> 0x011b
-// all other nominal responses are 0x1d
-// with current app
-//   response 5 - start to show primed amount
-//   response 8 - start to show inserted amount
-//   response 11 - switch to fixed string for 0x1d
-
-
 func Unmarshal(data []byte) (Command, error) {
 	var err error
 	if len(data) < 10 {
@@ -114,25 +102,19 @@ func Unmarshal(data []byte) (Command, error) {
 
 	data = data[7 : n-2]
 	var ret Command
-	if SimulatorProgress < 11 {
-		SimulatorProgress = SimulatorProgress + 1
-	}
 
 	switch t {
 	case GET_VERSION:
 		ret, err = UnmarshalGetVersion(data)
 		PodProgress = 2 // set with -fresh
-		SimulatorProgress = 1 // first response new pod
 	case SET_UNIQUE_ID:
 		ret, err = UnmarshalSetUniqueID(data)
 		PodProgress = 3 // set with -fresh
 	case PROGRAM_ALERTS:
-		if SimulatorProgress < 5 {
+		if PodProgress < 4 {
 			ret, err = UnmarshalProgramAlertsBeforePrime(data)
-		} else if SimulatorProgress < 8 {
-			ret, err = UnmarshalProgramInsulinInsert(data)
-		} else if SimulatorProgress <= 11 {
-			ret, err = UnmarshalProgramPostInsert(data)
+		} else if PodProgress < 7 {
+			ret, err = UnmarshalProgramAlertsBeforeInsert(data)
 		} else {
 			ret, err = UnmarshalProgramAlerts(data)
 		}
@@ -145,27 +127,39 @@ func Unmarshal(data []byte) (Command, error) {
 			// this must be the program scheduled basal command
 			PodProgress = 6
 			ret, err = UnmarshalProgramInsulinSchedule(data)
-		} else if PodProgress == 6 {
+		} else if PodProgress < 7 {
 			// this must be the insert cannula command
 			PodProgress = 7
 			ret, err = UnmarshalProgramInsulinInsert(data)
 		} else {
+			if PodProgress < 8 {
+				PodProgress = 8
+			}
 			ret, err = UnmarshalProgramInsulin(data)
 		}
 	case GET_STATUS:
-		if data[1] == 0 {
-			if PodProgress == 8 {
-				ret, err = UnmarshalGetStatus(data)
-			} else if SimulatorProgress < 11 {
-				PodProgress = 8
-				ret, err = UnmarshalProgramPostInsert(data)
+		// type 7 returns page0, dash specific type
+		if data[1] == 0 || data[1] == 7 {
+			if PodProgress <= 4 {
+				// PDM uses a type 7 get status after prime
+				PodProgress = 5
+				ret, err = UnmarshalProgramPrimeComplete(data)
 			} else {
+				if PodProgress < 8 {
+					PodProgress = 8
+				}
 				ret, err = UnmarshalGetStatus(data)
 			}
-		} else if data[1]&0x2 == 0x2 {
+		} else if data[1] == 0x2 {
 			ret, err = UnmarshalType2Status(data)
+		} else if data[1] == 0x46 {
+			ret, err = UnmarshalType46Status(data)
+		} else if data[1] == 0x50 {
+			ret, err = UnmarshalType50Status(data)
+		} else if data[1] == 0x51 {
+			ret, err = UnmarshalType51Status(data)
 		} else {
-			ret, err = UnmarshalType5xStatus(data)
+			ret, err = UnmarshalNack(data)
 		}
 	case SILENCE_ALERTS:
 		ret, err = UnmarshalSilenceAlerts(data)
@@ -188,6 +182,6 @@ func Unmarshal(data []byte) (Command, error) {
 		return nil, err
 	}
 
-	log.Infof("pkg command; PodProgress = %d", PodProgress)
+	log.Debugf("pkg command; PodProgress = %d", PodProgress)
 	return ret, nil
 }
