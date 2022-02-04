@@ -29,9 +29,10 @@ type PodMsgBody struct {
 }
 
 type Pod struct {
-	ble   *bluetooth.Ble
-	state *PODState
-	mtx 	sync.Mutex
+	ble       *bluetooth.Ble
+	state     *PODState
+	mtx 	    sync.Mutex
+	stateHook func([]byte)
 }
 
 func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
@@ -55,12 +56,30 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	return ret
 }
 
+func (p *Pod) SetStateHook(hook func([]byte)) {
+  p.stateHook = hook
+}
+
+
 func (p *Pod) GetPodStateJson() ([]byte, error) {
 	p.mtx.Lock()
 	data,error := json.Marshal(p.state)
   p.mtx.Unlock()
 
 	return data,error
+}
+
+func (p *Pod) notifyStateChange() {
+	if p.stateHook != nil {
+		data,err := p.GetPodStateJson()
+		if err != nil {
+			log.Error(err)
+		} else {
+			p.stateHook(data)
+		}
+	} else {
+		log.Infof("No stateHook")
+	}
 }
 
 func (p *Pod) StartAcceptingCommands() {
@@ -271,5 +290,7 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			log.Fatalf("pkg pod; this should be empty message with ACK header %s", spew.Sdump(msg))
 		}
 		p.state.Save()
+		log.Debugf("notifyingStateChange")
+		p.notifyStateChange()
 	}
 }
