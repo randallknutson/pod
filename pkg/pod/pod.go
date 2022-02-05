@@ -4,6 +4,7 @@ import (
 	"time"
 	"sync"
 	"encoding/json"
+	"encoding/hex"
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
@@ -248,10 +249,10 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
-		rsp, err := cmd.GetResponse()
-		if err != nil {
-			log.Fatalf("pkg pod; could not get command response: %s", err)
-		}
+		rsp := p.getResponse(cmd)
+
+		msgBytes, err := rsp.Marshal()
+		log.Debugf("******************************************** %s", hex.EncodeToString(msgBytes))
 
 		if cmd.GetType() == command.SET_UNIQUE_ID {
 			// Set the unique ID
@@ -305,8 +306,23 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 	}
 }
 
+func (p *Pod) getResponse(cmd command.Command) (response.Response) {
+
+	switch cmd.GetType() {
+	case command.GET_STATUS:
+		return &response.GeneralStatusResponse{0,p.state.ReservoirLevel}
+	default:
+		rsp, err := cmd.GetResponse()
+		if err != nil {
+			log.Fatalf("pkg pod; could not get command response: %s", err)
+		}
+		return rsp
+	}
+}
+
 func (p *Pod) SetReservoir(newVal float32) {
 	p.mtx.Lock()
 	p.state.ReservoirLevel = newVal
+	p.state.Save()
 	p.mtx.Unlock()
 }

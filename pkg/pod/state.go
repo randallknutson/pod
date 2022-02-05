@@ -20,9 +20,9 @@ type PODState struct {
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
 
-	ReservoirLevel float32
-	Alerts         uint8
-	FaultType      uint8
+	ReservoirLevel float32 `toml:"reservoir"`
+	Alerts         uint8   `toml:"alerts"`
+	FaultType      uint8   `toml:"fault"`
 
 	Filename    string
 }

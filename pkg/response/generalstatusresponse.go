@@ -23,11 +23,22 @@ import (
 
 type GeneralStatusResponse struct {
 	Seq uint16
+	Reservoir float32
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 	// response, _ := hex.DecodeString("1d58001cc014000013ff") // immediate_bolus_active is true
 
+  // 1D 18 00A02800 000463FF
+	// 00 01 02030405 06070809
+  // 1d SS 0PPPSNNN AATTTTRR
 	response, _ := hex.DecodeString("1D1800A02800000463FF") // Default
+
+	if r.Reservoir < 50 {
+		pulses := uint16(r.Reservoir / 0.05)
+		response[9] = uint8(pulses & 0xff)
+		response[8] = response[8] & 0b11111100 | uint8(pulses >> 8)
+	}
+
 	return response, nil
 }
