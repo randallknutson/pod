@@ -34,7 +34,21 @@ func main() {
 		ForceColors:  true,
 	})
 
-	ble, err := bluetooth.New("hci0")
+	// TODO: This is kinda ugly, move state reader into own file and pass state to both BLE and pod
+	state := &pod.PODState{
+		Filename: *stateFile,
+	}
+	var err error
+	if !(*freshState) {
+		state, err = pod.NewState(*stateFile)
+		if err != nil {
+			log.Fatalf("pkg pod; could not restore pod state from %s: %+v", stateFile, err)
+		}
+	}
+
+	log.Tracef("podId %@ %x", state.Id, state.Id)
+
+	ble, err := bluetooth.New("hci0", state.Id)
 	//defer ble.Close()
 	if err != nil {
 		log.Fatalf("Could not start BLE: %s", err)

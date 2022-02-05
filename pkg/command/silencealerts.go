@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-	type SilenceAlerts struct {
+type SilenceAlerts struct {
 	Seq uint8
 	ID  []byte
 }
@@ -30,4 +30,12 @@ func (g *SilenceAlerts) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *SilenceAlerts) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *SilenceAlerts) GetPayload() Payload {
+	return nil
+}
+
+func (g *SilenceAlerts) GetType() Type {
+	return SILENCE_ALERTS
 }

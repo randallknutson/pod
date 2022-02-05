@@ -66,7 +66,8 @@ func payloadWithHeaderAndCRC(rsp Response, seq uint8, responseID []byte) ([]byte
 	buf.Write(payload)
 	buf.Write(crc.CRC16(buf.Bytes()))
 
-	log.Infof("pkg response; priorSeq 0x%x; msgType 0x%2.2x; simResp, %x", priorSeq, msgType, buf.Bytes())
+	//log.Infof("pkg response; priorSeq 0x%x; msgType 0x%2.2x; simResp, %x", priorSeq, msgType, buf.Bytes())
+	log.Infof("pkg response 0x%x; HEX, %x", msgType, buf.Bytes())
 
 	return buf.Bytes(), nil
 }
