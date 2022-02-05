@@ -220,6 +220,9 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		lastMsgSeq = msg.SequenceNumber
 
+		// Lock mutex before we start using/modifying state
+		p.mtx.Lock()
+
 		decrypted, err := encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
 			log.Fatalf("pkg pod; could not decrypt message: %s", err)
@@ -261,7 +264,6 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			log.Tracef("SET_UNIQUE_ID uniqueId %@", uniqueId)
 			p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
 			p.state.Id = uniqueId
-			p.state.Save()
 		}
 
 		p.state.MsgSeq++
@@ -301,6 +303,8 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			log.Fatalf("pkg pod; this should be empty message with ACK header %s", spew.Sdump(msg))
 		}
 		p.state.Save()
+		p.mtx.Unlock()
+
 		log.Debugf("notifyingStateChange")
 		p.notifyStateChange()
 	}
