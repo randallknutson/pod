@@ -2,11 +2,12 @@ package api
 
 import (
     "fmt"
-    "log"
     "net/http"
+    "encoding/json"
 
     "github.com/gorilla/websocket"
     "github.com/avereha/pod/pkg/pod"
+    log "github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -28,17 +29,17 @@ func New(pod *pod.Pod) *Server {
 func (s *Server) Start() {
   fmt.Println("Pod simulator web api listening on :8080")
   s.setupRoutes()
-  fmt.Println("Setting StateHook")
-  s.pod.SetStateHook(func(state []byte) {
-    s.handleNewState(state)
+  fmt.Println("Setting Web Message Hook")
+  s.pod.SetWebMessageHook(func(msg []byte) {
+    s.sendMessage(msg)
   })
   http.ListenAndServe(":8080", nil)
 }
 
-func (s *Server) handleNewState(state []byte) {
+func (s *Server) sendMessage(msg []byte) {
   fmt.Println("writing to websocket")
   if s.conn != nil {
-    if err := s.conn.WriteMessage(websocket.TextMessage, state); err != nil {
+    if err := s.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
       log.Println(err)
       return
     }
@@ -87,7 +88,36 @@ func (s *Server) reader(conn *websocket.Conn) {
       return
     }
     fmt.Println("Received: " + string(p))
+    s.handleCommand(p)
   }
+}
+
+func (s *Server) handleCommand(bytes []byte) {
+  var msg map[string]interface{}
+  if err := json.Unmarshal(bytes, &msg); err != nil {
+		log.Error(err)
+    return
+	}
+
+  var (
+		command string
+		value   float64
+		ok      bool
+	)
+
+  if command, ok = msg["command"].(string); !ok {
+		log.Fatal("command is not a string or not in msg")
+	}
+
+  if command == "changeReservoir" {
+    if value, ok = msg["value"].(float64); !ok {
+  		log.Fatal("reservoir value is not a number or not in msg")
+  	}
+    s.pod.SetReservoir(float32(value))
+  }
+
+  //SetReservoir
+
 }
 
 

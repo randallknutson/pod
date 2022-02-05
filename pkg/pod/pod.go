@@ -18,7 +18,7 @@ import (
 )
 
 type PodMsgBody struct {
-	// This contains the decrytped message body
+	// This contains the decrypted message body
 	//   MsgBodyCommand: incoming after stripping off address and crc
 	//   MsgBodyResponse: outgoing before adding address and crc
 	//      not sure how to get this to this level and don't really need it
@@ -32,7 +32,7 @@ type Pod struct {
 	ble       *bluetooth.Ble
 	state     *PODState
 	mtx 	    sync.Mutex
-	stateHook func([]byte)
+	webMessageHook func([]byte)
 }
 
 func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
@@ -40,6 +40,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 
 	state := &PODState{
 		filename: stateFile,
+		ReservoirLevel: 150,
 	}
 	if !freshState {
 		state, err = NewState(stateFile)
@@ -56,10 +57,9 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	return ret
 }
 
-func (p *Pod) SetStateHook(hook func([]byte)) {
-  p.stateHook = hook
+func (p *Pod) SetWebMessageHook(hook func([]byte)) {
+  p.webMessageHook = hook
 }
-
 
 func (p *Pod) GetPodStateJson() ([]byte, error) {
 	p.mtx.Lock()
@@ -70,15 +70,15 @@ func (p *Pod) GetPodStateJson() ([]byte, error) {
 }
 
 func (p *Pod) notifyStateChange() {
-	if p.stateHook != nil {
+	if p.webMessageHook != nil {
 		data,err := p.GetPodStateJson()
 		if err != nil {
 			log.Error(err)
 		} else {
-			p.stateHook(data)
+			p.webMessageHook(data)
 		}
 	} else {
-		log.Infof("No stateHook")
+		log.Infof("No webMessageHook")
 	}
 }
 
@@ -293,4 +293,10 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		log.Debugf("notifyingStateChange")
 		p.notifyStateChange()
 	}
+}
+
+func (p *Pod) SetReservoir(newVal float32) {
+	p.mtx.Lock()
+	p.state.ReservoirLevel = newVal
+	p.mtx.Unlock()
 }
