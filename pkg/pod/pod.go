@@ -4,7 +4,6 @@ import (
 	"time"
 	"sync"
 	"encoding/json"
-	"encoding/hex"
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
@@ -84,7 +83,7 @@ func (p *Pod) notifyStateChange() {
 }
 
 func (p *Pod) StartAcceptingCommands() {
-	log.Infof("pkg pod; got a new BLE connection")
+	log.Infof("pkg pod; Listening for commands")
 	firstCmd, _ := p.ble.ReadCmd()
 	log.Infof("pkg pod; got first command: as string: %s", firstCmd)
 
@@ -210,7 +209,14 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			log.Exit(0)
 		}
 		log.Infof("pkg pod;   *** Waiting for the next command ***")
-		msg, _ := p.ble.ReadMessage()
+		msg, didTimeout := p.ble.ReadMessageWithTimeout(1 * time.Minute)
+		if didTimeout {
+			p.ble.ShutdownConnection()
+			go func() {
+				p.StartAcceptingCommands()
+			}()
+			return
+		}
 		log.Tracef("pkg pod; got command message: %s", spew.Sdump(msg))
 
 		if msg.SequenceNumber == lastMsgSeq {
@@ -253,9 +259,6 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
 		rsp := p.getResponse(cmd)
-
-		msgBytes, err := rsp.Marshal()
-		log.Debugf("******************************************** %s", hex.EncodeToString(msgBytes))
 
 		if cmd.GetType() == command.SET_UNIQUE_ID {
 			// Set the unique ID
