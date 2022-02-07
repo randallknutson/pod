@@ -24,6 +24,11 @@ type PODState struct {
 	Alerts         uint8   `toml:"alerts"`
 	FaultType      uint8   `toml:"fault"`
 
+	// At some point these could be replaced with info on the actual programmed delivery
+	Bolusing         bool `toml:"bolusing"`
+	BasalRunning     bool `toml:"basal_running"`
+	TempBasalRunning bool `toml:"temp_basal_running"`
+
 	Filename    string
 }
 

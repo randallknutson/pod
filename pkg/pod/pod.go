@@ -40,6 +40,9 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 
 	state := &PODState{
 		ReservoirLevel: 150,
+		Bolusing: false,
+		BasalRunning: true,
+		TempBasalRunning: false,
 		Filename: stateFile,
 	}
 	if !freshState {
@@ -258,6 +261,8 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
+		p.handleCommand(cmd)
+
 		var rsp response.Response
 		switch cmd.GetResponseType() {
 		case command.ShortStatus:
@@ -319,6 +324,28 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 
 		log.Debugf("notifyingStateChange")
 		p.notifyStateChange()
+	}
+}
+
+func (p *Pod) handleCommand(cmd command.Command) {
+	switch v := cmd.(type) {
+	case *command.StopDelivery:
+		log.Debugf("StopDelivery")
+		if v.StopBolus {
+			log.Debugf("Stopping Bolus")
+			p.state.Bolusing = false
+		}
+		if v.StopTempBasal {
+			log.Debugf("Stopping TempBasal")
+			p.state.TempBasalRunning = false
+		}
+		if v.StopBasal {
+			log.Debugf("Stopping Basal")
+			p.state.BasalRunning = false
+		}
+
+	default:
+		// No action
 	}
 }
 
