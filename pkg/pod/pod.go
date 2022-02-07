@@ -258,7 +258,16 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
-		rsp := p.getResponse(cmd)
+		var rsp response.Response
+		switch cmd.GetResponseType() {
+		case command.ShortStatus:
+			rsp = &response.GeneralStatusResponse{0,p.state.ReservoirLevel}
+		case command.Hardcoded:
+			rsp, err = cmd.GetResponse()
+			if err != nil {
+				log.Fatalf("pkg pod; could not get command response: %s", err)
+			}
+		}
 
 		if cmd.GetType() == command.SET_UNIQUE_ID {
 			// Set the unique ID
@@ -310,20 +319,6 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 
 		log.Debugf("notifyingStateChange")
 		p.notifyStateChange()
-	}
-}
-
-func (p *Pod) getResponse(cmd command.Command) (response.Response) {
-
-	switch cmd.GetType() {
-	case command.GET_STATUS:
-		return &response.GeneralStatusResponse{0,p.state.ReservoirLevel}
-	default:
-		rsp, err := cmd.GetResponse()
-		if err != nil {
-			log.Fatalf("pkg pod; could not get command response: %s", err)
-		}
-		return rsp
 	}
 }
 

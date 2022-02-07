@@ -17,6 +17,10 @@ func UnmarshalProgramPrimeComplete(data []byte) (*ProgramPrimeComplete, error) {
 	return ret, nil
 }
 
+func (g *ProgramPrimeComplete) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramPrimeComplete) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.StatusResponsePrimeComplete{}, nil

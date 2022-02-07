@@ -17,6 +17,10 @@ func UnmarshalCnfgDelivFlag(data []byte) (*CnfgDelivFlag, error) {
 	return ret, nil
 }
 
+func (g *CnfgDelivFlag) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *CnfgDelivFlag) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil

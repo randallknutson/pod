@@ -17,6 +17,10 @@ func UnmarshalProgramInsulinSchedule(data []byte) (*ProgramInsulinSchedule, erro
 	return ret, nil
 }
 
+func (g *ProgramInsulinSchedule) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramInsulinSchedule) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.StatusResponseSchedule{}, nil

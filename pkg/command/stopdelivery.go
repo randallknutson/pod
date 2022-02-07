@@ -17,6 +17,10 @@ func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 	return ret, nil
 }
 
+func (g *StopDelivery) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *StopDelivery) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil

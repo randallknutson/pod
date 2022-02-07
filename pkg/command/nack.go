@@ -17,6 +17,10 @@ func UnmarshalNack(data []byte) (*Nack, error) {
 	return ret, nil
 }
 
+func (g *Nack) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *Nack) GetResponse() (response.Response, error) {
 	return &response.NackResponse{}, nil
 }

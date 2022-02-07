@@ -21,6 +21,10 @@ func UnmarshalSetUniqueID(data []byte) (*SetUniqueID, error) {
 	return ret, nil
 }
 
+func (g *SetUniqueID) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *SetUniqueID) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.SetUniqueID{}, nil

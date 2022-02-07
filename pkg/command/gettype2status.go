@@ -16,6 +16,10 @@ func UnmarshalType2Status(data []byte) (*GetType2Status, error) {
 	return ret, nil
 }
 
+func (g *GetType2Status) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *GetType2Status) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.Type2StatusResponse{}, nil

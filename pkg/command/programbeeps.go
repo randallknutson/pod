@@ -17,6 +17,10 @@ func UnmarshalProgramBeeps(data []byte) (*ProgramBeeps, error) {
 	return ret, nil
 }
 
+func (g *ProgramBeeps) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramBeeps) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil

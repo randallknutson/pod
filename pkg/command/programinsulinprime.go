@@ -17,6 +17,10 @@ func UnmarshalProgramInsulinPrime(data []byte) (*ProgramInsulinPrime, error) {
 	return ret, nil
 }
 
+func (g *ProgramInsulinPrime) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramInsulinPrime) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.StatusResponsePrime{}, nil

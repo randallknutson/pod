@@ -17,6 +17,10 @@ func UnmarshalProgramInsulinInsert(data []byte) (*ProgramInsulinInsert, error) {
 	return ret, nil
 }
 
+func (g *ProgramInsulinInsert) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramInsulinInsert) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.StatusResponseInsert{}, nil

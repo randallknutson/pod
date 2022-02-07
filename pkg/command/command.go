@@ -47,7 +47,16 @@ var (
 	}
 )
 
+type CommandResponseType int64
+const (
+	ShortStatus CommandResponseType = iota // 0x02
+	//LongStatus
+	//PodInfo
+	Hardcoded // Return this and pod.go will use command.GetResponse
+)
+
 type Command interface {
+	GetResponseType() (CommandResponseType)
 	GetResponse() (response.Response, error)
 	SetHeaderData(uint8, []byte) error
 	GetHeaderData() (cmdSeq uint8, requestID []byte, err error)

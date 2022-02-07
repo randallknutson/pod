@@ -17,6 +17,10 @@ func UnmarshalProgramAlertsBeforeInsert(data []byte) (*ProgramAlertsBeforeInsert
 	return ret, nil
 }
 
+func (g *ProgramAlertsBeforeInsert) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *ProgramAlertsBeforeInsert) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponseBeforeInsert{}, nil

@@ -17,6 +17,10 @@ func UnmarshalSilenceAlerts(data []byte) (*SilenceAlerts, error) {
 	return ret, nil
 }
 
+func (g *SilenceAlerts) GetResponseType() (CommandResponseType) {
+	return Hardcoded
+}
+
 func (g *SilenceAlerts) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil

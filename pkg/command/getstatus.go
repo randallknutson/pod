@@ -17,8 +17,13 @@ func UnmarshalGetStatus(data []byte) (*GetStatus, error) {
 	return ret, nil
 }
 
+func (g *GetStatus) GetResponseType() (CommandResponseType) {
+	return ShortStatus
+}
+
+// TODO remove this once all other message types return something other than
+// Hardcoded for GetResponseType()
 func (g *GetStatus) GetResponse() (response.Response, error) {
-	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil
 }
 
