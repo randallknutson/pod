@@ -156,7 +156,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 					b.dataNotifierMtx.Lock()
 					b.dataNotifier = n
 					b.dataNotifierMtx.Unlock()
-					log.Infof("pkg bluetooth; handling CMD notifications on new connection from: %s", r.Central.ID())
+					log.Infof("pkg bluetooth; handling DATA notifications on new connection from: %s", r.Central.ID())
 					log.Infof("     *** OK to send commands from the phone app ***")
 				})
 
@@ -280,7 +280,7 @@ func (b *Ble) ReadMessageWithTimeout(d time.Duration) (*message.Message, bool) {
   case message := <-b.messageInput:
     return message, false
   case <-time.After(d):
-		log.Infof("ReadMessage timeout")
+		log.Debugf("ReadMessage timeout")
     return nil, true
   }
 }
@@ -295,16 +295,12 @@ func (b *Ble) WriteMessage(message *message.Message) {
 
 func (b *Ble) loop(stop chan bool) {
 	for {
-		log.Infof("pkd bluetooth; loop()")
 		select {
 		case <-stop:
-			log.Infof("pkd bluetooth; loop() stop")
 			return
 		case msg := <-b.messageOutput:
-			log.Infof("pkd bluetooth; loop() messageOutput")
 			b.writeMessage(msg)
 		case cmd := <-b.cmdInput:
-			log.Infof("pkd bluetooth; loop() cmdInput")
 			msg, err := b.readMessage(cmd)
 			if err != nil {
 				log.Fatalf("pkg bluetooth; error reading message: %s", err)
