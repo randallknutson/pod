@@ -43,6 +43,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 		Bolusing: false,
 		BasalRunning: true,
 		TempBasalRunning: false,
+		ActiveAlertSlots: 0x00,
 		Filename: stateFile,
 	}
 	if !freshState {
@@ -265,8 +266,8 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 
 		var rsp response.Response
 		switch cmd.GetResponseType() {
-		case command.ShortStatus:
-			rsp = &response.GeneralStatusResponse{0,p.state.ReservoirLevel}
+		case command.Dynamic:
+			rsp = &response.GeneralStatusResponse{0,p.state.ReservoirLevel,p.state.ActiveAlertSlots}
 		case command.Hardcoded:
 			rsp, err = cmd.GetResponse()
 			if err != nil {
@@ -330,20 +331,18 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 func (p *Pod) handleCommand(cmd command.Command) {
 	switch v := cmd.(type) {
 	case *command.StopDelivery:
-		log.Debugf("StopDelivery")
 		if v.StopBolus {
-			log.Debugf("Stopping Bolus")
 			p.state.Bolusing = false
 		}
 		if v.StopTempBasal {
-			log.Debugf("Stopping TempBasal")
 			p.state.TempBasalRunning = false
 		}
 		if v.StopBasal {
-			log.Debugf("Stopping Basal")
 			p.state.BasalRunning = false
 		}
-
+	case *command.SilenceAlerts:
+		log.Debugf("SilenceAlerts")
+		p.state.ActiveAlertSlots = p.state.ActiveAlertSlots &^ v.AlertMask
 	default:
 		// No action
 	}
@@ -352,6 +351,13 @@ func (p *Pod) handleCommand(cmd command.Command) {
 func (p *Pod) SetReservoir(newVal float32) {
 	p.mtx.Lock()
 	p.state.ReservoirLevel = newVal
+	p.state.Save()
+	p.mtx.Unlock()
+}
+
+func (p *Pod) SetAlerts(newVal uint8) {
+	p.mtx.Lock()
+	p.state.ActiveAlertSlots = newVal
 	p.state.Save()
 	p.mtx.Unlock()
 }

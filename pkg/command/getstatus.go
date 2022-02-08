@@ -18,7 +18,7 @@ func UnmarshalGetStatus(data []byte) (*GetStatus, error) {
 }
 
 func (g *GetStatus) GetResponseType() (CommandResponseType) {
-	return ShortStatus
+	return Dynamic
 }
 
 // TODO remove this once all other message types return something other than

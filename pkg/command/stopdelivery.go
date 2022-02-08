@@ -25,7 +25,7 @@ func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 }
 
 func (g *StopDelivery) GetResponseType() (CommandResponseType) {
-	return ShortStatus
+	return Dynamic
 }
 
 func (g *StopDelivery) GetResponse() (response.Response, error) {

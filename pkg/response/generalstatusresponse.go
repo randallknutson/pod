@@ -24,6 +24,7 @@ import (
 type GeneralStatusResponse struct {
 	Seq uint16
 	Reservoir float32
+	Alerts uint8
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
@@ -33,6 +34,10 @@ func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 	// 00 01 02030405 06070809
   // 1d SS 0PPPSNNN AATTTTRR
 	response, _ := hex.DecodeString("1D1800A02800000463FF") // Default
+
+	// Set active alert slot bits
+	response[6] = response[6] & 0b10000000 | (r.Alerts >> 1)
+	response[7] = response[7] & 0b01111111 | (r.Alerts << 7)
 
 	if r.Reservoir < 50 {
 		pulses := uint16(r.Reservoir / 0.05)

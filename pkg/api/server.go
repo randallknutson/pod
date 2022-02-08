@@ -109,15 +109,18 @@ func (s *Server) handleCommand(bytes []byte) {
 		log.Fatal("command is not a string or not in msg")
 	}
 
-  if command == "changeReservoir" {
+  switch command {
+  case "changeReservoir":
     if value, ok = msg["value"].(float64); !ok {
   		log.Fatal("reservoir value is not a number or not in msg")
   	}
     s.pod.SetReservoir(float32(value))
+  case "setAlerts":
+    if value, ok = msg["value"].(float64); !ok {
+  		log.Fatal("reservoir value is not a number or not in msg")
+  	}
+    s.pod.SetAlerts(uint8(value))
   }
-
-  //SetReservoir
-
 }
 
 

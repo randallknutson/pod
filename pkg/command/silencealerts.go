@@ -8,17 +8,18 @@ import (
 type SilenceAlerts struct {
 	Seq uint8
 	ID  []byte
+	AlertMask uint8
 }
 
 func UnmarshalSilenceAlerts(data []byte) (*SilenceAlerts, error) {
 	ret := &SilenceAlerts{}
-	// TODO deserialize this command
-	log.Debugf("SilenceAlerts, 0x11, received, data %x", data)
+	ret.AlertMask = data[5]
+	log.Debugf("SilenceAlerts, 0x11, received, alert mask %x", ret.AlertMask)
 	return ret, nil
 }
 
 func (g *SilenceAlerts) GetResponseType() (CommandResponseType) {
-	return Hardcoded
+	return Dynamic
 }
 
 func (g *SilenceAlerts) GetResponse() (response.Response, error) {

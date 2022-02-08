@@ -20,9 +20,9 @@ type PODState struct {
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
 
-	ReservoirLevel float32 `toml:"reservoir"`
-	Alerts         uint8   `toml:"alerts"`
-	FaultType      uint8   `toml:"fault"`
+	ReservoirLevel   float32 `toml:"reservoir"`
+	ActiveAlertSlots uint8   `toml:"alerts"`
+	FaultType        uint8   `toml:"fault"`
 
 	// At some point these could be replaced with info on the actual programmed delivery
 	Bolusing         bool `toml:"bolusing"`

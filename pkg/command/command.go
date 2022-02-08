@@ -49,9 +49,7 @@ var (
 
 type CommandResponseType int64
 const (
-	ShortStatus CommandResponseType = iota // 0x02
-	//LongStatus
-	//PodInfo
+	Dynamic CommandResponseType = iota // 0x02
 	Hardcoded // Return this and pod.go will use command.GetResponse
 )
 
