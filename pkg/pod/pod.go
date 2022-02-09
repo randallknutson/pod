@@ -39,10 +39,11 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
 	state := &PODState{
-		ReservoirLevel: 150,
-		Bolusing: false,
-		BasalRunning: true,
-		TempBasalRunning: false,
+		Reservoir: 150/0.05,
+		BolusActive: false,
+		BasalActive: true,
+		TempBasalActive: false,
+		ExtendedBolusActive: false,
 		ActiveAlertSlots: 0x00,
 		Filename: stateFile,
 	}
@@ -267,7 +268,16 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		var rsp response.Response
 		switch cmd.GetResponseType() {
 		case command.Dynamic:
-			rsp = &response.GeneralStatusResponse{0,p.state.ReservoirLevel,p.state.ActiveAlertSlots}
+			rsp = &response.GeneralStatusResponse{
+				Seq: 0,
+				Reservoir:           p.state.Reservoir,
+				Alerts:              p.state.ActiveAlertSlots,
+				BolusActive:         p.state.BolusActive,
+        TempBasalActive:     p.state.TempBasalActive,
+				BasalActive:         p.state.BasalActive,
+				ExtendedBolusActive: p.state.ExtendedBolusActive,
+				PodProgress:         p.state.PodProgress,
+			}
 		case command.Hardcoded:
 			rsp, err = cmd.GetResponse()
 			if err != nil {
@@ -329,20 +339,52 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 }
 
 func (p *Pod) handleCommand(cmd command.Command) {
-	switch v := cmd.(type) {
+	switch c := cmd.(type) {
+	case *command.GetVersion:
+		p.state.PodProgress = response.PodProgressReminderInitialized
+	case *command.SetUniqueID:
+		p.state.PodProgress = response.PodProgressPairingCompleted
+	case *command.ProgramInsulin:
+		if p.state.PodProgress < response.PodProgressPriming {
+			// this must be the prime command
+			p.state.PodProgress = response.PodProgressPriming
+		} else if p.state.PodProgress < response.PodProgressBasalInitialized {
+			// this must be the program scheduled basal command
+			p.state.PodProgress = response.PodProgressBasalInitialized
+		} else if p.state.PodProgress < response.PodProgressInsertingCannula {
+			// this must be the insert cannula command
+			p.state.PodProgress = response.PodProgressInsertingCannula
+		} else if p.state.PodProgress < response.PodProgressRunningAbove50U {
+			p.state.PodProgress = response.PodProgressRunningAbove50U
+		}
+		p.state.Delivered += c.Pulses
+		p.state.Reservoir -= c.Pulses
+	case *command.GetStatus:
+		// type 7 returns page0, dash specific type
+		if c.RequestType == 0 || c.RequestType == 7 {
+			if p.state.PodProgress <= 4 {
+				// PDM uses a type 7 get status after prime
+				p.state.PodProgress = 5
+			} else {
+				if p.state.PodProgress < response.PodProgressRunningAbove50U {
+					p.state.PodProgress = response.PodProgressRunningAbove50U
+				}
+			}
+		}
 	case *command.StopDelivery:
-		if v.StopBolus {
-			p.state.Bolusing = false
+		if c.StopBolus {
+			p.state.BolusActive = false
+			p.state.ExtendedBolusActive = false
 		}
-		if v.StopTempBasal {
-			p.state.TempBasalRunning = false
+		if c.StopTempBasal {
+			p.state.TempBasalActive = false
 		}
-		if v.StopBasal {
-			p.state.BasalRunning = false
+		if c.StopBasal {
+			p.state.BasalActive = false
 		}
 	case *command.SilenceAlerts:
 		log.Debugf("SilenceAlerts")
-		p.state.ActiveAlertSlots = p.state.ActiveAlertSlots &^ v.AlertMask
+		p.state.ActiveAlertSlots = p.state.ActiveAlertSlots &^ c.AlertMask
 	default:
 		// No action
 	}
@@ -350,7 +392,7 @@ func (p *Pod) handleCommand(cmd command.Command) {
 
 func (p *Pod) SetReservoir(newVal float32) {
 	p.mtx.Lock()
-	p.state.ReservoirLevel = newVal
+	p.state.Reservoir = uint16(newVal*20)
 	p.state.Save()
 	p.mtx.Unlock()
 }

@@ -8,12 +8,19 @@ import (
 type ProgramInsulin struct {
 	Seq uint8
 	ID  []byte
+	TableNum byte
+	Pulses uint16
 }
 
 func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
 	ret := &ProgramInsulin{}
 	// TODO deserialize this command
 	log.Debugf("ProgramInsulin, 0x1a, received, data %x", data)
+
+	// 1a LL NNNNNNNN 02 CCCC HH SSSS PPPP 0ppp
+	//    00 01020304 05 0607 08 0910 1112 1314
+	ret.TableNum = data[5]
+	ret.Pulses = (uint16(data[11]) << 8) + uint16(data[12])
 	return ret, nil
 }
 

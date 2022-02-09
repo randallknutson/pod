@@ -5,6 +5,8 @@ import (
 
 	toml "github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/avereha/pod/pkg/response"
 )
 
 type PODState struct {
@@ -20,14 +22,19 @@ type PODState struct {
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
 
-	ReservoirLevel   float32 `toml:"reservoir"`
-	ActiveAlertSlots uint8   `toml:"alerts"`
-	FaultType        uint8   `toml:"fault"`
+	PodProgress response.PodProgress
 
-	// At some point these could be replaced with info on the actual programmed delivery
-	Bolusing         bool `toml:"bolusing"`
-	BasalRunning     bool `toml:"basal_running"`
-	TempBasalRunning bool `toml:"temp_basal_running"`
+	Reservoir        uint16 `toml:"reservoir"`
+	ActiveAlertSlots uint8  `toml:"alerts"`
+	FaultType        uint8  `toml:"fault"`
+	Delivered        uint16 `toml:"delivered"`
+
+	// At some point these could be replaced with details
+	// of each kind of delivery (volume, start time, schedule, etc)
+	BolusActive         bool `toml:"bolus_active"`
+	BasalActive         bool `toml:"basal_active"`
+	TempBasalActive     bool `toml:"temp_basal_active"`
+	ExtendedBolusActive bool `toml:"extended_bolus_active"`
 
 	Filename    string
 }
