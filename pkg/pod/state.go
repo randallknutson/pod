@@ -2,6 +2,7 @@ package pod
 
 import (
 	"io/ioutil"
+	"time"
 
 	toml "github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
@@ -23,10 +24,12 @@ type PODState struct {
 	CK          []byte `toml:"ck"`
 
 	PodProgress response.PodProgress
+	ActivationTime   time.Time `toml:"activation_time"`
 
 	Reservoir        uint16 `toml:"reservoir"`
 	ActiveAlertSlots uint8  `toml:"alerts"`
-	FaultType        uint8  `toml:"fault"`
+	FaultEvent       uint8  `toml:"fault"`
+	FaultTime        uint16 `toml:"fault_time"`
 	Delivered        uint16 `toml:"delivered"`
 
 	// At some point these could be replaced with details
@@ -60,4 +63,8 @@ func (p *PODState) Save() error {
 		return err
 	}
 	return ioutil.WriteFile(p.Filename, data, 0777)
+}
+
+func (p *PODState) MinutesActive() uint16 {
+	return uint16(time.Now().Sub(p.ActivationTime).Round(time.Minute).Minutes())
 }

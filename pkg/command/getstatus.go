@@ -33,7 +33,7 @@ func (g *GetStatus) GetResponseType() (CommandResponseType) {
 // Hardcoded for GetResponseType()
 func (g *GetStatus) GetResponse() (response.Response, error) {
 	if g.RequestType == 0x2 {
-		return &response.Type2StatusResponse{}, nil
+		return &response.DetailedStatusResponse{}, nil
  } else if g.RequestType == 0x46 {
 	 return &response.Type46StatusResponse{}, nil
  } else if g.RequestType == 0x50 {

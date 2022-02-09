@@ -45,6 +45,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 		TempBasalActive: false,
 		ExtendedBolusActive: false,
 		ActiveAlertSlots: 0x00,
+		ActivationTime: time.Now(),
 		Filename: stateFile,
 	}
 	if !freshState {
@@ -268,15 +269,33 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		var rsp response.Response
 		switch cmd.GetResponseType() {
 		case command.Dynamic:
-			rsp = &response.GeneralStatusResponse{
-				Seq: 0,
-				Reservoir:           p.state.Reservoir,
-				Alerts:              p.state.ActiveAlertSlots,
-				BolusActive:         p.state.BolusActive,
-        TempBasalActive:     p.state.TempBasalActive,
-				BasalActive:         p.state.BasalActive,
-				ExtendedBolusActive: p.state.ExtendedBolusActive,
-				PodProgress:         p.state.PodProgress,
+			if p.state.FaultEvent == 0 {
+				rsp = &response.GeneralStatusResponse{
+					Seq: 0,
+					Reservoir:           p.state.Reservoir,
+					Alerts:              p.state.ActiveAlertSlots,
+					BolusActive:         p.state.BolusActive,
+	        TempBasalActive:     p.state.TempBasalActive,
+					BasalActive:         p.state.BasalActive,
+					ExtendedBolusActive: p.state.ExtendedBolusActive,
+					PodProgress:         p.state.PodProgress,
+					ActiveTimeMinutes:   p.state.MinutesActive(),
+				}
+			} else {
+				rsp = &response.DetailedStatusResponse{
+					Seq: 0,
+					Reservoir:           p.state.Reservoir,
+					Alerts:              p.state.ActiveAlertSlots,
+					BolusActive:         p.state.BolusActive,
+	        TempBasalActive:     p.state.TempBasalActive,
+					BasalActive:         p.state.BasalActive,
+					ExtendedBolusActive: p.state.ExtendedBolusActive,
+					PodProgress:         p.state.PodProgress,
+					ActiveTimeMinutes:   p.state.MinutesActive(),
+					FaultEvent:          p.state.FaultEvent,
+					FaultEventTime:      p.state.FaultTime,
+				}
+
 			}
 		case command.Hardcoded:
 			rsp, err = cmd.GetResponse()
@@ -400,6 +419,14 @@ func (p *Pod) SetReservoir(newVal float32) {
 func (p *Pod) SetAlerts(newVal uint8) {
 	p.mtx.Lock()
 	p.state.ActiveAlertSlots = newVal
+	p.state.Save()
+	p.mtx.Unlock()
+}
+
+func (p *Pod) SetFault(newVal uint8) {
+	p.mtx.Lock()
+	p.state.FaultEvent = newVal
+	p.state.FaultTime = p.state.MinutesActive()
 	p.state.Save()
 	p.mtx.Unlock()
 }

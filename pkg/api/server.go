@@ -117,9 +117,14 @@ func (s *Server) handleCommand(bytes []byte) {
     s.pod.SetReservoir(float32(value))
   case "setAlerts":
     if value, ok = msg["value"].(float64); !ok {
-  		log.Fatal("reservoir value is not a number or not in msg")
+  		log.Fatal("alert value is not a number or not in msg")
   	}
     s.pod.SetAlerts(uint8(value))
+  case "setFault":
+    if value, ok = msg["value"].(float64); !ok {
+  		log.Fatal("fault value is not a number or not in msg")
+  	}
+    s.pod.SetFault(uint8(value))
   }
 }
 

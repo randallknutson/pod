@@ -57,14 +57,10 @@ type GeneralStatusResponse struct {
 	ActiveTimeMinutes   uint16
 	Reservoir           uint16
 	LastProgSeqNum      uint8
+	TimeActive          uint16
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
-	// response, _ := hex.DecodeString("1d58001cc014000013ff") // immediate_bolus_active is true
-
-  // 1D 18 00A02800 000463FF
-	// 00 01 02030405 06070809
-  // 1d SS 0PPPSNNN AATTTTRR
 	response, _ := hex.DecodeString("1D1800A02800000463FF") // Default
 
 	// Delivery bits
@@ -92,6 +88,10 @@ func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 	// Set active alert slot bits
 	response[6] = response[6] & 0b10000000 | (r.Alerts >> 1)
 	response[7] = response[7] & 0b01111111 | (r.Alerts << 7)
+
+	// Time Active Minutes
+	response[7] = response[7] & 0b10000000 | uint8((r.TimeActive >> 6) & 0b01111111)
+	response[8] = response[8] & 0b00000011 | uint8((r.TimeActive << 2) & 0b11111100)
 
 	if r.Reservoir < (50/0.05) {
 		response[8] = response[8] & 0b11111100 | uint8(r.Reservoir >> 8)
