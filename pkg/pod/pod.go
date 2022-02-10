@@ -35,6 +35,10 @@ type Pod struct {
 	webMessageHook func([]byte)
 }
 
+// Once one of these are set, the next command will crash the executable.
+var crashBeforeProcessingCommand bool
+var crashAfterProcessingCommand bool
+
 func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
@@ -259,10 +263,14 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
+		if crashBeforeProcessingCommand {
+			log.Fatalf("pkg pod; Crashing before processing command")
+		}
+
 		p.handleCommand(cmd)
 
-		if cmd.DoesMutatePodState() {
-			p.state.LastProgSeqNum = cmd.GetSeq()
+		if crashBeforeProcessingCommand {
+			log.Fatalf("pkg pod; Crashing after processing command")
 		}
 
 		var rsp response.Response
@@ -435,6 +443,9 @@ func (p *Pod) handleCommand(cmd command.Command) {
 	default:
 		// No action
 	}
+	if cmd.DoesMutatePodState() {
+		p.state.LastProgSeqNum = cmd.GetSeq()
+	}
 }
 
 func (p *Pod) SetReservoir(newVal float32) {
@@ -462,6 +473,17 @@ func (p *Pod) SetFault(newVal uint8) {
 func (p *Pod) SetActiveTime(newVal int) {
 	p.mtx.Lock()
 	p.state.ActivationTime = time.Now().Add(- time.Duration(newVal) * time.Minute)
+	p.state.Save()
+	p.mtx.Unlock()
+}
+
+func (p *Pod) CrashNextCommand(beforeProcessing bool) {
+	p.mtx.Lock()
+	if beforeProcessing {
+		crashBeforeProcessingCommand = true
+	} else {
+		crashAfterProcessingCommand = true
+	}
 	p.state.Save()
 	p.mtx.Unlock()
 }

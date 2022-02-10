@@ -130,6 +130,12 @@ func (s *Server) handleCommand(bytes []byte) {
 			log.Fatal("active time in minutes is not a number or not in msg")
 		}
 		s.pod.SetActiveTime(int(value))
+	case "crashNextCommand":
+		var beforeProcessing bool
+		if beforeProcessing, ok = msg["beforeProcessing"].(bool); !ok {
+			log.Fatal("beforeProcessing is not a bool or not in msg")
+		}
+		s.pod.CrashNextCommand(beforeProcessing)
 	}
 }
 
