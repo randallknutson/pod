@@ -125,6 +125,11 @@ func (s *Server) handleCommand(bytes []byte) {
 			log.Fatal("fault value is not a number or not in msg")
 		}
 		s.pod.SetFault(uint8(value))
+	case "setActiveTime":
+		if value, ok = msg["value"].(float64); !ok {
+			log.Fatal("active time in minutes is not a number or not in msg")
+		}
+		s.pod.SetActiveTime(int(value))
 	}
 }
 

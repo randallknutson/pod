@@ -458,3 +458,10 @@ func (p *Pod) SetFault(newVal uint8) {
 	p.state.Save()
 	p.mtx.Unlock()
 }
+
+func (p *Pod) SetActiveTime(newVal int) {
+	p.mtx.Lock()
+	p.state.ActivationTime = time.Now().Add(- time.Duration(newVal) * time.Minute)
+	p.state.Save()
+	p.mtx.Unlock()
+}
