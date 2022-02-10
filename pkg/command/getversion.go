@@ -24,8 +24,8 @@ func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
 	return ret, nil
 }
 
-func (g *GetVersion) GetResponseType() (CommandResponseType) {
-	return Hardcoded
+func (g *GetVersion) IsResponseHardcoded() bool {
+	return true
 }
 
 func (g *GetVersion) GetResponse() (response.Response, error) {

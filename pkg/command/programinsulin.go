@@ -24,8 +24,8 @@ func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
 	return ret, nil
 }
 
-func (g *ProgramInsulin) GetResponseType() (CommandResponseType) {
-	return Dynamic
+func (g *ProgramInsulin) IsResponseHardcoded() bool {
+	return false
 }
 
 func (g *ProgramInsulin) GetResponse() (response.Response, error) {

@@ -24,8 +24,8 @@ func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 	return ret, nil
 }
 
-func (g *StopDelivery) GetResponseType() (CommandResponseType) {
-	return Dynamic
+func (g *StopDelivery) IsResponseHardcoded() bool {
+	return false
 }
 
 func (g *StopDelivery) GetResponse() (response.Response, error) {

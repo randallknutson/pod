@@ -21,11 +21,11 @@ func UnmarshalGetStatus(data []byte) (*GetStatus, error) {
 	return ret, nil
 }
 
-func (g *GetStatus) GetResponseType() (CommandResponseType) {
-	if g.RequestType == 0 || g.RequestType == 7 {
-		return Dynamic
+func (g *GetStatus) IsResponseHardcoded() bool {
+	if g.RequestType == 0 || g.RequestType == 7 || g.RequestType == 2 {
+		return false
 	} else {
-		return Hardcoded
+		return true
 	}
 }
 

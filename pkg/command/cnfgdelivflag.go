@@ -17,8 +17,8 @@ func UnmarshalCnfgDelivFlag(data []byte) (*CnfgDelivFlag, error) {
 	return ret, nil
 }
 
-func (g *CnfgDelivFlag) GetResponseType() (CommandResponseType) {
-	return Hardcoded
+func (g *CnfgDelivFlag) IsResponseHardcoded() bool {
+	return true
 }
 
 func (g *CnfgDelivFlag) GetResponse() (response.Response, error) {

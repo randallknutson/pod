@@ -41,7 +41,7 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	state := &PODState{
 		Reservoir: 150/0.05,
 		BolusActive: false,
-		BasalActive: true,
+		BasalActive: false,
 		TempBasalActive: false,
 		ExtendedBolusActive: false,
 		ActiveAlertSlots: 0x00,
@@ -267,41 +267,13 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		p.handleCommand(cmd)
 
 		var rsp response.Response
-		switch cmd.GetResponseType() {
-		case command.Dynamic:
-			if p.state.FaultEvent == 0 {
-				rsp = &response.GeneralStatusResponse{
-					Seq: 0,
-					Reservoir:           p.state.Reservoir,
-					Alerts:              p.state.ActiveAlertSlots,
-					BolusActive:         p.state.BolusActive,
-	        TempBasalActive:     p.state.TempBasalActive,
-					BasalActive:         p.state.BasalActive,
-					ExtendedBolusActive: p.state.ExtendedBolusActive,
-					PodProgress:         p.state.PodProgress,
-					ActiveTimeMinutes:   p.state.MinutesActive(),
-				}
-			} else {
-				rsp = &response.DetailedStatusResponse{
-					Seq: 0,
-					Reservoir:           p.state.Reservoir,
-					Alerts:              p.state.ActiveAlertSlots,
-					BolusActive:         p.state.BolusActive,
-	        TempBasalActive:     p.state.TempBasalActive,
-					BasalActive:         p.state.BasalActive,
-					ExtendedBolusActive: p.state.ExtendedBolusActive,
-					PodProgress:         p.state.PodProgress,
-					ActiveTimeMinutes:   p.state.MinutesActive(),
-					FaultEvent:          p.state.FaultEvent,
-					FaultEventTime:      p.state.FaultTime,
-				}
-
-			}
-		case command.Hardcoded:
+		if cmd.IsResponseHardcoded() {
 			rsp, err = cmd.GetResponse()
 			if err != nil {
 				log.Fatalf("pkg pod; could not get command response: %s", err)
 			}
+		} else {
+			rsp = p.getResponse(cmd)
 		}
 
 		if cmd.GetType() == command.SET_UNIQUE_ID {
@@ -357,6 +329,50 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 	}
 }
 
+func (p *Pod) makeGeneralStatusResponse() response.Response {
+	return &response.GeneralStatusResponse{
+		Seq: 0,
+		Reservoir:           p.state.Reservoir,
+		Alerts:              p.state.ActiveAlertSlots,
+		BolusActive:         p.state.BolusActive,
+		TempBasalActive:     p.state.TempBasalActive,
+		BasalActive:         p.state.BasalActive,
+		ExtendedBolusActive: p.state.ExtendedBolusActive,
+		PodProgress:         p.state.PodProgress,
+		ActiveTimeMinutes:   p.state.MinutesActive(),
+	}
+}
+
+func (p *Pod) makeDetailedStatusResponse() response.Response {
+	return &response.DetailedStatusResponse{
+		Seq: 0,
+		Reservoir:           p.state.Reservoir,
+		Alerts:              p.state.ActiveAlertSlots,
+		BolusActive:         p.state.BolusActive,
+		TempBasalActive:     p.state.TempBasalActive,
+		BasalActive:         p.state.BasalActive,
+		ExtendedBolusActive: p.state.ExtendedBolusActive,
+		PodProgress:         p.state.PodProgress,
+		ActiveTimeMinutes:   p.state.MinutesActive(),
+		FaultEvent:          p.state.FaultEvent,
+		FaultEventTime:      p.state.FaultTime,
+	}
+}
+
+func (p *Pod) getResponse(cmd command.Command) response.Response {
+	var rsp response.Response
+
+	// If explicit request for detail, or we have a fault, return detail status.
+	getStatus, ok := cmd.(*command.GetStatus)
+	if (ok && getStatus.RequestType == 2) || p.state.FaultEvent != 0 {
+		rsp = p.makeDetailedStatusResponse()
+	} else {
+		rsp = p.makeGeneralStatusResponse()
+	}
+	return rsp
+}
+
+
 func (p *Pod) handleCommand(cmd command.Command) {
 	switch c := cmd.(type) {
 	case *command.GetVersion:
@@ -376,8 +392,18 @@ func (p *Pod) handleCommand(cmd command.Command) {
 		} else if p.state.PodProgress < response.PodProgressRunningAbove50U {
 			p.state.PodProgress = response.PodProgressRunningAbove50U
 		}
-		p.state.Delivered += c.Pulses
-		p.state.Reservoir -= c.Pulses
+
+		// Programming basal schedule
+		if c.TableNum == 0 {
+			p.state.BasalActive = true
+		}
+
+		// Programming bolus; just immediately decrement reservoir
+		// Would be nice to eventually simulate actual pulses over time.
+		if c.TableNum == 2 {
+			p.state.Delivered += c.Pulses
+			p.state.Reservoir -= c.Pulses
+		}
 	case *command.GetStatus:
 		// type 7 returns page0, dash specific type
 		if c.RequestType == 0 || c.RequestType == 7 {

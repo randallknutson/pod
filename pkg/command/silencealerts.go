@@ -18,8 +18,8 @@ func UnmarshalSilenceAlerts(data []byte) (*SilenceAlerts, error) {
 	return ret, nil
 }
 
-func (g *SilenceAlerts) GetResponseType() (CommandResponseType) {
-	return Dynamic
+func (g *SilenceAlerts) IsResponseHardcoded() bool {
+	return false
 }
 
 func (g *SilenceAlerts) GetResponse() (response.Response, error) {

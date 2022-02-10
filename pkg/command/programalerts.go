@@ -17,8 +17,8 @@ func UnmarshalProgramAlerts(data []byte) (*ProgramAlerts, error) {
 	return ret, nil
 }
 
-func (g *ProgramAlerts) GetResponseType() (CommandResponseType) {
-	return Hardcoded
+func (g *ProgramAlerts) IsResponseHardcoded() bool {
+	return false
 }
 
 func (g *ProgramAlerts) GetResponse() (response.Response, error) {

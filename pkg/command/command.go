@@ -47,14 +47,8 @@ var (
 	}
 )
 
-type CommandResponseType int64
-const (
-	Dynamic CommandResponseType = iota // 0x02
-	Hardcoded // Return this and pod.go will use command.GetResponse
-)
-
 type Command interface {
-	GetResponseType() (CommandResponseType)
+	IsResponseHardcoded() bool
 	GetResponse() (response.Response, error)
 	SetHeaderData(uint8, []byte) error
 	GetHeaderData() (cmdSeq uint8, requestID []byte, err error)

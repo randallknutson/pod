@@ -17,8 +17,8 @@ func UnmarshalDeactivate(data []byte) (*Deactivate, error) {
 	return ret, nil
 }
 
-func (g *Deactivate) GetResponseType() (CommandResponseType) {
-	return Hardcoded
+func (g *Deactivate) IsResponseHardcoded() bool {
+	return true
 }
 
 func (g *Deactivate) GetResponse() (response.Response, error) {
