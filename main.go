@@ -4,9 +4,9 @@ import (
 	"flag"
 	"time"
 
+	"github.com/avereha/pod/pkg/api"
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/pod"
-	"github.com/avereha/pod/pkg/api"
 
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"

@@ -6,10 +6,10 @@ import (
 )
 
 type ProgramInsulin struct {
-	Seq uint8
-	ID  []byte
+	Seq      uint8
+	ID       []byte
 	TableNum byte
-	Pulses uint16
+	Pulses   uint16
 }
 
 func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {

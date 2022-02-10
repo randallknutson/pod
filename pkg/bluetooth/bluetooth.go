@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/avereha/pod/pkg/message"
 	"github.com/davecgh/go-spew/spew"
@@ -41,10 +41,10 @@ type Ble struct {
 	device   *gatt.Device
 	central  *gatt.Central
 
-	cmdNotifier gatt.Notifier
+	cmdNotifier    gatt.Notifier
 	cmdNotifierMtx sync.Mutex
 
-	dataNotifier gatt.Notifier
+	dataNotifier    gatt.Notifier
 	dataNotifierMtx sync.Mutex
 }
 
@@ -118,8 +118,6 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 			}
 		}
 	}()
-
-
 
 	// A mandatory handler for monitoring device state.
 	onStateChanged := func(d gatt.Device, s gatt.State) {
@@ -277,12 +275,12 @@ func (b *Ble) ReadMessage() (*message.Message, error) {
 
 func (b *Ble) ReadMessageWithTimeout(d time.Duration) (*message.Message, bool) {
 	select {
-  case message := <-b.messageInput:
-    return message, false
-  case <-time.After(d):
+	case message := <-b.messageInput:
+		return message, false
+	case <-time.After(d):
 		log.Debugf("ReadMessage timeout")
-    return nil, true
-  }
+		return nil, true
+	}
 }
 
 func (b *Ble) ShutdownConnection() {

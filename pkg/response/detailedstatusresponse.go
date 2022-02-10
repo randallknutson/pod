@@ -5,7 +5,7 @@ import (
 )
 
 type DetailedStatusResponse struct {
-	Seq uint16
+	Seq                 uint16
 	Alerts              uint8
 	BolusActive         bool
 	TempBasalActive     bool
@@ -35,10 +35,18 @@ func (r *DetailedStatusResponse) Marshal() ([]byte, error) {
 	response[3] = byte(r.PodProgress)
 
 	// Delivery bits
-	if r.BasalActive         { response[4] = response[4] | (1<<0) }
-	if r.TempBasalActive     { response[4] = response[4] | (1<<1) }
-	if r.BolusActive         { response[4] = response[4] | (1<<2) }
-	if r.ExtendedBolusActive { response[4] = response[4] | (1<<3) }
+	if r.BasalActive {
+		response[4] = response[4] | (1 << 0)
+	}
+	if r.TempBasalActive {
+		response[4] = response[4] | (1 << 1)
+	}
+	if r.BolusActive {
+		response[4] = response[4] | (1 << 2)
+	}
+	if r.ExtendedBolusActive {
+		response[4] = response[4] | (1 << 3)
+	}
 
 	// Bolus remaining pulses
 	response[5] = byte(r.BolusRemaining >> 8)
@@ -52,14 +60,14 @@ func (r *DetailedStatusResponse) Marshal() ([]byte, error) {
 	response[9] = byte(r.Delivered & 0xff)
 
 	// Fault event
-  response[10] = r.FaultEvent
+	response[10] = r.FaultEvent
 
 	// Fault Event Time
 	response[11] = byte(r.FaultEventTime >> 8)
 	response[12] = byte(r.FaultEventTime & 0xff)
 
 	// Reservoir
-	if r.Reservoir < (50/0.05) {
+	if r.Reservoir < (50 / 0.05) {
 		response[13] = byte(r.Reservoir >> 8)
 		response[14] = byte(r.Reservoir & 0xff)
 	} else {

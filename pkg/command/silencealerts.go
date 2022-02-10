@@ -6,8 +6,8 @@ import (
 )
 
 type SilenceAlerts struct {
-	Seq uint8
-	ID  []byte
+	Seq       uint8
+	ID        []byte
 	AlertMask uint8
 }
 

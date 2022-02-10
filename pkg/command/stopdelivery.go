@@ -6,11 +6,11 @@ import (
 )
 
 type StopDelivery struct {
-	Seq uint8
-	ID  []byte
-	StopBolus bool
+	Seq           uint8
+	ID            []byte
+	StopBolus     bool
 	StopTempBasal bool
-	StopBasal bool
+	StopBasal     bool
 }
 
 func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
@@ -20,7 +20,7 @@ func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 		StopBasal:     (data[5] & 0b1) != 0,
 	}
 	// 05 49 4e 53 2e 07 1910494e532e580f000f06046800001e0302
-	log.Debugf("StopDelivery, 0x1f, received, data %x, stop_bits = %x", data, data[5] & 0b1)
+	log.Debugf("StopDelivery, 0x1f, received, data %x, stop_bits = %x", data, data[5]&0b1)
 	return ret, nil
 }
 

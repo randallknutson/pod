@@ -1,9 +1,9 @@
 package pod
 
 import (
-	"time"
-	"sync"
 	"encoding/json"
+	"sync"
+	"time"
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
@@ -29,9 +29,9 @@ type PodMsgBody struct {
 }
 
 type Pod struct {
-	ble       *bluetooth.Ble
-	state     *PODState
-	mtx 	    sync.Mutex
+	ble            *bluetooth.Ble
+	state          *PODState
+	mtx            sync.Mutex
 	webMessageHook func([]byte)
 }
 
@@ -39,14 +39,14 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
 	state := &PODState{
-		Reservoir: 150/0.05,
-		BolusActive: false,
-		BasalActive: false,
-		TempBasalActive: false,
+		Reservoir:           150 / 0.05,
+		BolusActive:         false,
+		BasalActive:         false,
+		TempBasalActive:     false,
 		ExtendedBolusActive: false,
-		ActiveAlertSlots: 0x00,
-		ActivationTime: time.Now(),
-		Filename: stateFile,
+		ActiveAlertSlots:    0x00,
+		ActivationTime:      time.Now(),
+		Filename:            stateFile,
 	}
 	if !freshState {
 		state, err = NewState(stateFile)
@@ -64,20 +64,20 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 }
 
 func (p *Pod) SetWebMessageHook(hook func([]byte)) {
-  p.webMessageHook = hook
+	p.webMessageHook = hook
 }
 
 func (p *Pod) GetPodStateJson() ([]byte, error) {
 	p.mtx.Lock()
-	data,error := json.Marshal(p.state)
-  p.mtx.Unlock()
+	data, error := json.Marshal(p.state)
+	p.mtx.Unlock()
 
-	return data,error
+	return data, error
 }
 
 func (p *Pod) notifyStateChange() {
 	if p.webMessageHook != nil {
-		data,err := p.GetPodStateJson()
+		data, err := p.GetPodStateJson()
 		if err != nil {
 			log.Error(err)
 		} else {
@@ -267,7 +267,7 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		p.handleCommand(cmd)
 
 		if cmd.DoesMutatePodState() {
-				p.state.LastProgSeqNum = cmd.GetSeq()
+			p.state.LastProgSeqNum = cmd.GetSeq()
 		}
 
 		var rsp response.Response
@@ -335,7 +335,7 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 
 func (p *Pod) makeGeneralStatusResponse() response.Response {
 	return &response.GeneralStatusResponse{
-		Seq: 0,
+		Seq:                 0,
 		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
@@ -351,7 +351,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 
 func (p *Pod) makeDetailedStatusResponse() response.Response {
 	return &response.DetailedStatusResponse{
-		Seq: 0,
+		Seq:                 0,
 		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
@@ -379,7 +379,6 @@ func (p *Pod) getResponse(cmd command.Command) response.Response {
 	}
 	return rsp
 }
-
 
 func (p *Pod) handleCommand(cmd command.Command) {
 	switch c := cmd.(type) {
@@ -445,7 +444,7 @@ func (p *Pod) handleCommand(cmd command.Command) {
 
 func (p *Pod) SetReservoir(newVal float32) {
 	p.mtx.Lock()
-	p.state.Reservoir = uint16(newVal*20)
+	p.state.Reservoir = uint16(newVal * 20)
 	p.state.Save()
 	p.mtx.Unlock()
 }

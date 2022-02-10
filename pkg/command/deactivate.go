@@ -29,7 +29,6 @@ func (g *Deactivate) DoesMutatePodState() bool {
 	return true
 }
 
-
 func (g *Deactivate) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.DeactivateResponse{}, nil

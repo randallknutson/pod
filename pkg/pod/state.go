@@ -24,8 +24,8 @@ type PODState struct {
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
 
-	PodProgress response.PodProgress
-	ActivationTime   time.Time `toml:"activation_time"`
+	PodProgress    response.PodProgress
+	ActivationTime time.Time `toml:"activation_time"`
 
 	Reservoir        uint16 `toml:"reservoir"`
 	ActiveAlertSlots uint8  `toml:"alerts"`
@@ -40,7 +40,7 @@ type PODState struct {
 	TempBasalActive     bool `toml:"temp_basal_active"`
 	ExtendedBolusActive bool `toml:"extended_bolus_active"`
 
-	Filename    string
+	Filename string
 }
 
 func NewState(filename string) (*PODState, error) {

@@ -6,8 +6,8 @@ import (
 )
 
 type GetStatus struct {
-	Seq uint8
-	ID  []byte
+	Seq         uint8
+	ID          []byte
 	RequestType byte
 }
 
@@ -42,15 +42,15 @@ func (g *GetStatus) DoesMutatePodState() bool {
 func (g *GetStatus) GetResponse() (response.Response, error) {
 	if g.RequestType == 0x2 {
 		return &response.DetailedStatusResponse{}, nil
- } else if g.RequestType == 0x46 {
-	 return &response.Type46StatusResponse{}, nil
- } else if g.RequestType == 0x50 {
-	 return &response.Type50StatusResponse{}, nil
- } else if g.RequestType == 0x51 {
-	 return &response.Type51StatusResponse{}, nil
- } else {
-	 return &response.NackResponse{}, nil
- }
+	} else if g.RequestType == 0x46 {
+		return &response.Type46StatusResponse{}, nil
+	} else if g.RequestType == 0x50 {
+		return &response.Type50StatusResponse{}, nil
+	} else if g.RequestType == 0x51 {
+		return &response.Type51StatusResponse{}, nil
+	} else {
+		return &response.NackResponse{}, nil
+	}
 }
 
 func (g *GetStatus) SetHeaderData(seq uint8, id []byte) error {
