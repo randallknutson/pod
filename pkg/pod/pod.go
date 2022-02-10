@@ -339,6 +339,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 		BasalActive:         p.state.BasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
+		Delivered:           p.state.Delivered,
 		ActiveTimeMinutes:   p.state.MinutesActive(),
 	}
 }
@@ -353,6 +354,7 @@ func (p *Pod) makeDetailedStatusResponse() response.Response {
 		BasalActive:         p.state.BasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
+		Delivered:           p.state.Delivered,
 		ActiveTimeMinutes:   p.state.MinutesActive(),
 		FaultEvent:          p.state.FaultEvent,
 		FaultEventTime:      p.state.FaultTime,
