@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"time"
+	"sync"
 
 	"github.com/avereha/pod/pkg/message"
 	"github.com/davecgh/go-spew/spew"
@@ -36,6 +38,14 @@ type Ble struct {
 	messageOutput chan *message.Message
 
 	stopLoop chan bool
+	device   *gatt.Device
+	central  *gatt.Central
+
+	cmdNotifier gatt.Notifier
+	cmdNotifierMtx sync.Mutex
+
+	dataNotifier gatt.Notifier
+	dataNotifierMtx sync.Mutex
 }
 
 var DefaultServerOptions = []gatt.Option{
@@ -48,7 +58,12 @@ var DefaultServerOptions = []gatt.Option{
 	}),
 }
 
-func New(adapterID string) (*Ble, error) {
+func New(adapterID string, podId []byte) (*Ble, error) {
+	d, err := gatt.NewDevice(DefaultServerOptions...)
+	if err != nil {
+		log.Fatalf("pkg bluetooth; failed to open device, err: %s", err)
+	}
+
 	b := &Ble{
 		dataInput:     make(chan Packet, 5),
 		cmdInput:      make(chan Packet, 5),
@@ -56,22 +71,55 @@ func New(adapterID string) (*Ble, error) {
 		cmdOutput:     make(chan Packet, 5),
 		messageInput:  make(chan *message.Message, 5),
 		messageOutput: make(chan *message.Message, 2),
-	}
-
-	d, err := gatt.NewDevice(DefaultServerOptions...)
-	if err != nil {
-		log.Fatalf("pkg bluetooth; failed to open device, err: %s", err)
+		device:        &d,
 	}
 
 	d.Handle(
 		gatt.CentralConnected(func(c gatt.Central) {
-			fmt.Println("pkg bluetooth; ** connect: ", c.ID())
+			fmt.Println("pkg bluetooth; ** New connection from: ", c.ID())
 			b.StopMessageLoop()
+			b.central = &c
 		}),
 		gatt.CentralDisconnected(func(c gatt.Central) {
-			log.Fatalf("pkg bluetooth; ** disconnect: %s", c.ID())
+			log.Tracef("pkg bluetooth; ** disconnect: %s", c.ID())
 		}),
 	)
+
+	// Start cmd writing goroutine
+	go func() {
+		for {
+			packet := <-b.cmdOutput
+			b.cmdNotifierMtx.Lock()
+			if b.cmdNotifier.Done() {
+				log.Fatalf("pkg bluetooth; CMD closed")
+			}
+			ret, err := b.cmdNotifier.Write(packet)
+			b.cmdNotifierMtx.Unlock()
+			log.Tracef("pkg bluetooth; CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
+			if err != nil {
+				log.Fatalf("pkg bluetooth; error writing CMD: %s", err)
+			}
+		}
+	}()
+
+	// Start data writing goroutine
+	go func() {
+		for {
+			packet := <-b.dataOutput
+			b.dataNotifierMtx.Lock()
+			if b.dataNotifier.Done() {
+				log.Fatalf("pkg bluetooth; DATA closed")
+			}
+			ret, err := b.dataNotifier.Write(packet)
+			b.dataNotifierMtx.Unlock()
+			log.Tracef("pkg bluetooth; DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
+			if err != nil {
+				log.Fatalf("pkg bluetooth; error writing DATA: %s ", err)
+			}
+		}
+	}()
+
+
 
 	// A mandatory handler for monitoring device state.
 	onStateChanged := func(d gatt.Device, s gatt.State) {
@@ -96,40 +144,20 @@ func New(adapterID string) (*Ble, error) {
 
 			cmdCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("pkg bluetooth; enabled notifications for CMD:  %s", r.Central.ID())
-					go func() {
-						for {
-							if n.Done() {
-								log.Fatalf("pkg bluetooth; CMD closed")
-							}
-							packet := <-b.cmdOutput
-							ret, err := n.Write(packet)
-							log.Tracef("pkg bluetooth; CMD notification return: %d/%s", ret, hex.EncodeToString(packet))
-							if err != nil {
-								log.Fatalf("pkg bluetooth; error writing CMD: %s", err)
-							}
-						}
-					}()
+					b.cmdNotifierMtx.Lock()
+					b.cmdNotifier = n
+					b.cmdNotifierMtx.Unlock()
+					log.Infof("pkg bluetooth; handling CMD notifications on new connection from:  %s", r.Central.ID())
 				})
 
 			dataCharacteristic := s.AddCharacteristic(dataCharUUID)
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
-					log.Infof("pkg bluetooth; enabled notifications for DATA: %s", r.Central.ID())
+					b.dataNotifierMtx.Lock()
+					b.dataNotifier = n
+					b.dataNotifierMtx.Unlock()
+					log.Infof("pkg bluetooth; handling DATA notifications on new connection from: %s", r.Central.ID())
 					log.Infof("     *** OK to send commands from the phone app ***")
-					go func() {
-						for {
-							if n.Done() {
-								log.Fatalf("pkg bluetooth; DATA closed")
-							}
-							packet := <-b.dataOutput
-							ret, err := n.Write(packet)
-							log.Tracef("pkg bluetooth; DATA notification return: %d/%s", ret, hex.EncodeToString(packet))
-							if err != nil {
-								log.Fatalf("pkg bluetooth; error writing DATA: %s ", err)
-							}
-						}
-					}()
 				})
 
 			dataCharacteristic.HandleWriteFunc(
@@ -145,6 +173,14 @@ func New(adapterID string) (*Ble, error) {
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
+
+			podIdServiceOne := gatt.UUID16(0xffff)
+			podIdServiceTwo := gatt.UUID16(0xfffe)
+			if podId != nil {
+				podIdServiceOne = gatt.UUID16(binary.BigEndian.Uint16(podId[0:2]))
+				podIdServiceTwo = gatt.UUID16(binary.BigEndian.Uint16(podId[2:4]))
+			}
+
 			// Advertise device name and service's UUIDs.
 			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
 				gatt.UUID16(0x4024),
@@ -152,12 +188,14 @@ func New(adapterID string) (*Ble, error) {
 				gatt.UUID16(0x2470),
 				gatt.UUID16(0x000a),
 
-				gatt.UUID16(0xffff),
-				gatt.UUID16(0xfffe),
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
-				gatt.UUID16(0xaaaa),
+				podIdServiceOne,
+				podIdServiceTwo,
+
+				// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
+				gatt.UUID16(0x0814),
+				gatt.UUID16(0x6DB1),
+				gatt.UUID16(0x0006),
+				gatt.UUID16(0xE451),
 			})
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
@@ -172,20 +210,32 @@ func New(adapterID string) (*Ble, error) {
 	return b, nil
 }
 
-func (b *Ble) StartMessageLoop() {
-	if b.stopLoop != nil {
-		log.Fatalf("pkg bluetooth; Messaging loop is already running")
-	}
-	b.stopLoop = make(chan bool)
-	go b.loop(b.stopLoop)
-}
+func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, first 2 usually empty
+	log.Debugf("RefreshAdvertisingWithSpecifiedId %x", id)
+	// Looking at the paypal/gatt source code, we don't need to call StopAdvertising,
+	// but just call AdvertiseNameAndServices and it should update
 
-func (b *Ble) StopMessageLoop() {
-	// race condition, but this is called only on device disconnect
-	if b.stopLoop != nil {
-		close(b.stopLoop)
-		b.stopLoop = nil
+	log.Tracef("podIdServiceOne", gatt.UUID16(binary.BigEndian.Uint16(id[0:2])))
+	log.Tracef("podIdServiceTwo", gatt.UUID16(binary.BigEndian.Uint16(id[2:4])))
+	err := (*b.device).AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
+		gatt.UUID16(0x4024),
+
+		gatt.UUID16(0x2470),
+		gatt.UUID16(0x000a),
+
+		gatt.UUID16(binary.BigEndian.Uint16(id[0:2])),
+		gatt.UUID16(binary.BigEndian.Uint16(id[2:4])),
+
+		// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
+		gatt.UUID16(0x0814),
+		gatt.UUID16(0x6DB1),
+		gatt.UUID16(0x0006),
+		gatt.UUID16(0xE451),
+	})
+	if err != nil {
+		log.Infof("pkg bluetooth; could not re-advertise: %s", err)
 	}
+	return err
 }
 
 func (b *Ble) WriteCmd(packet Packet) error {
@@ -225,6 +275,20 @@ func (b *Ble) ReadMessage() (*message.Message, error) {
 	return message, nil
 }
 
+func (b *Ble) ReadMessageWithTimeout(d time.Duration) (*message.Message, bool) {
+	select {
+  case message := <-b.messageInput:
+    return message, false
+  case <-time.After(d):
+		log.Debugf("ReadMessage timeout")
+    return nil, true
+  }
+}
+
+func (b *Ble) ShutdownConnection() {
+	(*b.central).Close()
+}
+
 func (b *Ble) WriteMessage(message *message.Message) {
 	b.messageOutput <- message
 }
@@ -243,6 +307,22 @@ func (b *Ble) loop(stop chan bool) {
 			}
 			b.messageInput <- msg
 		}
+	}
+}
+
+func (b *Ble) StartMessageLoop() {
+	if b.stopLoop != nil {
+		log.Fatalf("pkg bluetooth; Messaging loop is already running")
+	}
+	b.stopLoop = make(chan bool)
+	go b.loop(b.stopLoop)
+}
+
+func (b *Ble) StopMessageLoop() {
+	// race condition, but this is called only on device disconnect
+	if b.stopLoop != nil {
+		close(b.stopLoop)
+		b.stopLoop = nil
 	}
 }
 

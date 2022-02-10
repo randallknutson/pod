@@ -17,6 +17,10 @@ func UnmarshalCnfgDelivFlag(data []byte) (*CnfgDelivFlag, error) {
 	return ret, nil
 }
 
+func (g *CnfgDelivFlag) IsResponseHardcoded() bool {
+	return true
+}
+
 func (g *CnfgDelivFlag) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil
@@ -30,4 +34,12 @@ func (g *CnfgDelivFlag) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *CnfgDelivFlag) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *CnfgDelivFlag) GetPayload() Payload {
+	return nil
+}
+
+func (g *CnfgDelivFlag) GetType() Type {
+	return CNFG_DELIV_FLAG
 }

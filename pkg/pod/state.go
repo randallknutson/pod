@@ -2,9 +2,12 @@ package pod
 
 import (
 	"io/ioutil"
+	"time"
 
 	toml "github.com/pelletier/go-toml"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/avereha/pod/pkg/response"
 )
 
 type PODState struct {
@@ -19,12 +22,29 @@ type PODState struct {
 
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
-	filename    string
+
+	PodProgress response.PodProgress
+	ActivationTime   time.Time `toml:"activation_time"`
+
+	Reservoir        uint16 `toml:"reservoir"`
+	ActiveAlertSlots uint8  `toml:"alerts"`
+	FaultEvent       uint8  `toml:"fault"`
+	FaultTime        uint16 `toml:"fault_time"`
+	Delivered        uint16 `toml:"delivered"`
+
+	// At some point these could be replaced with details
+	// of each kind of delivery (volume, start time, schedule, etc)
+	BolusActive         bool `toml:"bolus_active"`
+	BasalActive         bool `toml:"basal_active"`
+	TempBasalActive     bool `toml:"temp_basal_active"`
+	ExtendedBolusActive bool `toml:"extended_bolus_active"`
+
+	Filename    string
 }
 
 func NewState(filename string) (*PODState, error) {
 	var ret PODState
-	ret.filename = filename
+	ret.Filename = filename
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -37,10 +57,14 @@ func NewState(filename string) (*PODState, error) {
 }
 
 func (p *PODState) Save() error {
-	log.Debugf("Saving state to file: %s", p.filename)
+	log.Debugf("Saving state to file: %s", p.Filename)
 	data, err := toml.Marshal(p)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(p.filename, data, 0777)
+	return ioutil.WriteFile(p.Filename, data, 0777)
+}
+
+func (p *PODState) MinutesActive() uint16 {
+	return uint16(time.Now().Sub(p.ActivationTime).Round(time.Minute).Minutes())
 }

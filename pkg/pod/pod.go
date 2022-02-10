@@ -2,6 +2,8 @@ package pod
 
 import (
 	"time"
+	"sync"
+	"encoding/json"
 
 	"github.com/avereha/pod/pkg/bluetooth"
 	"github.com/avereha/pod/pkg/command"
@@ -16,26 +18,35 @@ import (
 )
 
 type PodMsgBody struct {
-	// This contains the decrytped message body
+	// This contains the decrypted message body
 	//   MsgBodyCommand: incoming after stripping off address and crc
 	//   MsgBodyResponse: outgoing before adding address and crc
 	//      not sure how to get this to this level and don't really need it
 	//   DeactivateFlag: set to true once 0x1c input is detected
-	MsgBodyCommand  []byte
+	MsgBodyCommand []byte
 	// MsgBodyResponse []byte
-	DeactivateFlag	bool
+	DeactivateFlag bool
 }
 
 type Pod struct {
-	ble   *bluetooth.Ble
-	state *PODState
+	ble       *bluetooth.Ble
+	state     *PODState
+	mtx 	    sync.Mutex
+	webMessageHook func([]byte)
 }
 
 func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
 	state := &PODState{
-		filename: stateFile,
+		Reservoir: 150/0.05,
+		BolusActive: false,
+		BasalActive: false,
+		TempBasalActive: false,
+		ExtendedBolusActive: false,
+		ActiveAlertSlots: 0x00,
+		ActivationTime: time.Now(),
+		Filename: stateFile,
 	}
 	if !freshState {
 		state, err = NewState(stateFile)
@@ -52,8 +63,33 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	return ret
 }
 
+func (p *Pod) SetWebMessageHook(hook func([]byte)) {
+  p.webMessageHook = hook
+}
+
+func (p *Pod) GetPodStateJson() ([]byte, error) {
+	p.mtx.Lock()
+	data,error := json.Marshal(p.state)
+  p.mtx.Unlock()
+
+	return data,error
+}
+
+func (p *Pod) notifyStateChange() {
+	if p.webMessageHook != nil {
+		data,err := p.GetPodStateJson()
+		if err != nil {
+			log.Error(err)
+		} else {
+			p.webMessageHook(data)
+		}
+	} else {
+		log.Infof("No webMessageHook")
+	}
+}
+
 func (p *Pod) StartAcceptingCommands() {
-	log.Infof("pkg pod; got a new BLE connection")
+	log.Infof("pkg pod; Listening for commands")
 	firstCmd, _ := p.ble.ReadCmd()
 	log.Infof("pkg pod; got first command: as string: %s", firstCmd)
 
@@ -173,13 +209,20 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 	var data []byte = make([]byte, 4)
 	var n int = 0
 	for {
-		if (pMsg.DeactivateFlag) {
+		if pMsg.DeactivateFlag {
 			log.Infof("pkg pod; Pod was deactivated. Use -fresh for new pod")
 			time.Sleep(1 * time.Second)
 			log.Exit(0)
 		}
 		log.Infof("pkg pod;   *** Waiting for the next command ***")
-		msg, _ := p.ble.ReadMessage()
+		msg, didTimeout := p.ble.ReadMessageWithTimeout(1 * time.Minute)
+		if didTimeout {
+			p.ble.ShutdownConnection()
+			go func() {
+				p.StartAcceptingCommands()
+			}()
+			return
+		}
 		log.Tracef("pkg pod; got command message: %s", spew.Sdump(msg))
 
 		if msg.SequenceNumber == lastMsgSeq {
@@ -188,6 +231,9 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			continue
 		}
 		lastMsgSeq = msg.SequenceNumber
+
+		// Lock mutex before we start using/modifying state
+		p.mtx.Lock()
 
 		decrypted, err := encrypt.DecryptMessage(p.state.CK, p.state.NoncePrefix, p.state.NonceSeq, msg)
 		if err != nil {
@@ -209,18 +255,34 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		data = decrypted.Payload
 		n = len(data)
 		log.Debugf("pkg pod; len = %d", n)
-		if (n<16) {
+		if n < 16 {
 			log.Fatalf("pkg pod; decrypted. Payload too short")
 		}
 		pMsg.MsgBodyCommand = data[13 : n-5]
-		if data[13]==0x1c {
+		if data[13] == 0x1c {
 			pMsg.DeactivateFlag = true
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
-		rsp, err := cmd.GetResponse()
-		if err != nil {
-			log.Fatalf("pkg pod; could not get command response: %s", err)
+		p.handleCommand(cmd)
+
+		var rsp response.Response
+		if cmd.IsResponseHardcoded() {
+			rsp, err = cmd.GetResponse()
+			if err != nil {
+				log.Fatalf("pkg pod; could not get command response: %s", err)
+			}
+		} else {
+			rsp = p.getResponse(cmd)
+		}
+
+		if cmd.GetType() == command.SET_UNIQUE_ID {
+			// Set the unique ID
+			log.Tracef("SET_UNIQUE_ID cmd.GetPayload() %@", cmd.GetPayload())
+			uniqueId := cmd.GetPayload()
+			log.Tracef("SET_UNIQUE_ID uniqueId %@", uniqueId)
+			p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
+			p.state.Id = uniqueId
 		}
 
 		p.state.MsgSeq++
@@ -260,5 +322,139 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			log.Fatalf("pkg pod; this should be empty message with ACK header %s", spew.Sdump(msg))
 		}
 		p.state.Save()
+		p.mtx.Unlock()
+
+		log.Debugf("notifyingStateChange")
+		p.notifyStateChange()
 	}
+}
+
+func (p *Pod) makeGeneralStatusResponse() response.Response {
+	return &response.GeneralStatusResponse{
+		Seq: 0,
+		Reservoir:           p.state.Reservoir,
+		Alerts:              p.state.ActiveAlertSlots,
+		BolusActive:         p.state.BolusActive,
+		TempBasalActive:     p.state.TempBasalActive,
+		BasalActive:         p.state.BasalActive,
+		ExtendedBolusActive: p.state.ExtendedBolusActive,
+		PodProgress:         p.state.PodProgress,
+		Delivered:           p.state.Delivered,
+		ActiveTimeMinutes:   p.state.MinutesActive(),
+	}
+}
+
+func (p *Pod) makeDetailedStatusResponse() response.Response {
+	return &response.DetailedStatusResponse{
+		Seq: 0,
+		Reservoir:           p.state.Reservoir,
+		Alerts:              p.state.ActiveAlertSlots,
+		BolusActive:         p.state.BolusActive,
+		TempBasalActive:     p.state.TempBasalActive,
+		BasalActive:         p.state.BasalActive,
+		ExtendedBolusActive: p.state.ExtendedBolusActive,
+		PodProgress:         p.state.PodProgress,
+		Delivered:           p.state.Delivered,
+		ActiveTimeMinutes:   p.state.MinutesActive(),
+		FaultEvent:          p.state.FaultEvent,
+		FaultEventTime:      p.state.FaultTime,
+	}
+}
+
+func (p *Pod) getResponse(cmd command.Command) response.Response {
+	var rsp response.Response
+
+	// If explicit request for detail, or we have a fault, return detail status.
+	getStatus, ok := cmd.(*command.GetStatus)
+	if (ok && getStatus.RequestType == 2) || p.state.FaultEvent != 0 {
+		rsp = p.makeDetailedStatusResponse()
+	} else {
+		rsp = p.makeGeneralStatusResponse()
+	}
+	return rsp
+}
+
+
+func (p *Pod) handleCommand(cmd command.Command) {
+	switch c := cmd.(type) {
+	case *command.GetVersion:
+		p.state.PodProgress = response.PodProgressReminderInitialized
+	case *command.SetUniqueID:
+		p.state.PodProgress = response.PodProgressPairingCompleted
+	case *command.ProgramInsulin:
+		if p.state.PodProgress < response.PodProgressPriming {
+			// this must be the prime command
+			p.state.PodProgress = response.PodProgressPriming
+		} else if p.state.PodProgress < response.PodProgressBasalInitialized {
+			// this must be the program scheduled basal command
+			p.state.PodProgress = response.PodProgressBasalInitialized
+		} else if p.state.PodProgress < response.PodProgressInsertingCannula {
+			// this must be the insert cannula command
+			p.state.PodProgress = response.PodProgressInsertingCannula
+		} else if p.state.PodProgress < response.PodProgressRunningAbove50U {
+			p.state.PodProgress = response.PodProgressRunningAbove50U
+		}
+
+		// Programming basal schedule
+		if c.TableNum == 0 {
+			p.state.BasalActive = true
+		}
+
+		// Programming bolus; just immediately decrement reservoir
+		// Would be nice to eventually simulate actual pulses over time.
+		if c.TableNum == 2 {
+			p.state.Delivered += c.Pulses
+			p.state.Reservoir -= c.Pulses
+		}
+	case *command.GetStatus:
+		// type 7 returns page0, dash specific type
+		if c.RequestType == 0 || c.RequestType == 7 {
+			if p.state.PodProgress <= 4 {
+				// PDM uses a type 7 get status after prime
+				p.state.PodProgress = 5
+			} else {
+				if p.state.PodProgress < response.PodProgressRunningAbove50U {
+					p.state.PodProgress = response.PodProgressRunningAbove50U
+				}
+			}
+		}
+	case *command.StopDelivery:
+		if c.StopBolus {
+			p.state.BolusActive = false
+			p.state.ExtendedBolusActive = false
+		}
+		if c.StopTempBasal {
+			p.state.TempBasalActive = false
+		}
+		if c.StopBasal {
+			p.state.BasalActive = false
+		}
+	case *command.SilenceAlerts:
+		log.Debugf("SilenceAlerts")
+		p.state.ActiveAlertSlots = p.state.ActiveAlertSlots &^ c.AlertMask
+	default:
+		// No action
+	}
+}
+
+func (p *Pod) SetReservoir(newVal float32) {
+	p.mtx.Lock()
+	p.state.Reservoir = uint16(newVal*20)
+	p.state.Save()
+	p.mtx.Unlock()
+}
+
+func (p *Pod) SetAlerts(newVal uint8) {
+	p.mtx.Lock()
+	p.state.ActiveAlertSlots = newVal
+	p.state.Save()
+	p.mtx.Unlock()
+}
+
+func (p *Pod) SetFault(newVal uint8) {
+	p.mtx.Lock()
+	p.state.FaultEvent = newVal
+	p.state.FaultTime = p.state.MinutesActive()
+	p.state.Save()
+	p.mtx.Unlock()
 }

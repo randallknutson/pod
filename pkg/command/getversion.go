@@ -24,6 +24,10 @@ func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
 	return ret, nil
 }
 
+func (g *GetVersion) IsResponseHardcoded() bool {
+	return true
+}
+
 func (g *GetVersion) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.VersionResponse{}, nil
@@ -37,4 +41,12 @@ func (g *GetVersion) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *GetVersion) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *GetVersion) GetPayload() Payload {
+	return nil
+}
+
+func (g *GetVersion) GetType() Type {
+	return GET_VERSION
 }

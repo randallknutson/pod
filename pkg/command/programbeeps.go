@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-	type ProgramBeeps struct {
+type ProgramBeeps struct {
 	Seq uint8
 	ID  []byte
 }
@@ -15,6 +15,10 @@ func UnmarshalProgramBeeps(data []byte) (*ProgramBeeps, error) {
 	// TODO deserialize this command
 	log.Debugf("ProgramBeeps, 0x1e, received, data %x", data)
 	return ret, nil
+}
+
+func (g *ProgramBeeps) IsResponseHardcoded() bool {
+	return false
 }
 
 func (g *ProgramBeeps) GetResponse() (response.Response, error) {
@@ -30,4 +34,12 @@ func (g *ProgramBeeps) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *ProgramBeeps) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *ProgramBeeps) GetPayload() Payload {
+	return nil
+}
+
+func (g *ProgramBeeps) GetType() Type {
+	return PROGRAM_BEEPS
 }

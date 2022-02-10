@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-	type Deactivate struct {
+type Deactivate struct {
 	Seq uint8
 	ID  []byte
 }
@@ -15,6 +15,10 @@ func UnmarshalDeactivate(data []byte) (*Deactivate, error) {
 	// TODO deserialize this command
 	log.Debugf("Deactivate, 0x1c, received, data %x", data)
 	return ret, nil
+}
+
+func (g *Deactivate) IsResponseHardcoded() bool {
+	return true
 }
 
 func (g *Deactivate) GetResponse() (response.Response, error) {
@@ -30,4 +34,12 @@ func (g *Deactivate) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *Deactivate) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *Deactivate) GetPayload() Payload {
+	return nil
+}
+
+func (g *Deactivate) GetType() Type {
+	return DEACTIVATE
 }

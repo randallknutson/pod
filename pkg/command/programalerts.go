@@ -17,6 +17,10 @@ func UnmarshalProgramAlerts(data []byte) (*ProgramAlerts, error) {
 	return ret, nil
 }
 
+func (g *ProgramAlerts) IsResponseHardcoded() bool {
+	return false
+}
+
 func (g *ProgramAlerts) GetResponse() (response.Response, error) {
 	// TODO improve responses
 	return &response.GeneralStatusResponse{}, nil
@@ -30,4 +34,12 @@ func (g *ProgramAlerts) SetHeaderData(seq uint8, id []byte) error {
 
 func (g *ProgramAlerts) GetHeaderData() (uint8, []byte, error) {
 	return g.Seq, g.ID, nil
+}
+
+func (g *ProgramAlerts) GetPayload() Payload {
+	return nil
+}
+
+func (g *ProgramAlerts) GetType() Type {
+	return PROGRAM_ALERTS
 }

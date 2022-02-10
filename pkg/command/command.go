@@ -10,6 +10,8 @@ import (
 
 type Type byte
 
+type Payload []byte
+
 const (
 	SET_UNIQUE_ID      Type = 0x03
 	GET_VERSION        Type = 0x07
@@ -24,6 +26,7 @@ const (
 	PROGRAM_BEEPS      Type = 0x1e
 	STOP_DELIVERY      Type = 0x1f
 	CNFG_DELIV_FLAG    Type = 0x08 // Loop uses configure delivery flag
+	NACK               Type = 0x00 // Loop uses configure delivery flag
 )
 
 var (
@@ -45,19 +48,17 @@ var (
 )
 
 type Command interface {
+	IsResponseHardcoded() bool
 	GetResponse() (response.Response, error)
 	SetHeaderData(uint8, []byte) error
 	GetHeaderData() (cmdSeq uint8, requestID []byte, err error)
+	GetPayload() Payload
+	GetType() Type
 }
 
 type CommandReader struct {
 	Data []byte // keep it simple for now
 }
-
-// PodProgress used to select appropriate the 0x1d response
-// initialize to 8 to support restart of pod simulator
-// when started with -fresh flag, modified by the 0x07: GET_VERSION, etc.
-var PodProgress = 8
 
 func Unmarshal(data []byte) (Command, error) {
 	var err error
@@ -97,47 +98,18 @@ func Unmarshal(data []byte) (Command, error) {
 
 	data = data[7 : n-2]
 	var ret Command
+
 	switch t {
 	case GET_VERSION:
 		ret, err = UnmarshalGetVersion(data)
-		PodProgress = 2  // set with -fresh
 	case SET_UNIQUE_ID:
 		ret, err = UnmarshalSetUniqueID(data)
-		PodProgress = 3  // set with -fresh
 	case PROGRAM_ALERTS:
-		if PodProgress < 4 {
-			ret, err = UnmarshalProgramAlertsBeforePrime(data)
-		} else {
-			ret, err = UnmarshalProgramAlerts(data)
-		}
+		ret, err = UnmarshalProgramAlerts(data)
 	case PROGRAM_INSULIN:
-		if (PodProgress < 4) {
-			// this must be the prime command
-			PodProgress = 4
-			ret, err = UnmarshalProgramInsulinPrime(data)
-		} else if (PodProgress < 6) {
-			// this must be the program scheduled basal command
-			PodProgress = 6
-			ret, err = UnmarshalProgramInsulinSchedule(data)
-		} else if (PodProgress == 6) {
-			// this must be the insert cannula command
-			PodProgress = 7
-			ret, err = UnmarshalProgramInsulinInsert(data)
-		} else {
-			PodProgress = 8
-			ret, err = UnmarshalProgramInsulin(data)
-		}
+		ret, err = UnmarshalProgramInsulin(data)
 	case GET_STATUS:
-		if (data[1]==0) {
-			if (PodProgress == 7) {
-				PodProgress = 8
-			}
-			ret, err = UnmarshalGetStatus(data)
-		} else if (data[1]&0x2 == 0x2) {
-			ret, err = UnmarshalType2Status(data)
-		} else {
-			ret, err = UnmarshalType5xStatus(data)
-		}
+		ret, err = UnmarshalGetStatus(data)
 	case SILENCE_ALERTS:
 		ret, err = UnmarshalSilenceAlerts(data)
 	case DEACTIVATE:
@@ -159,6 +131,5 @@ func Unmarshal(data []byte) (Command, error) {
 		return nil, err
 	}
 
-	log.Infof("pkg command; PodProgress = %d", PodProgress)
 	return ret, nil
 }

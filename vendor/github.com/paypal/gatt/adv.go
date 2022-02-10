@@ -1,7 +1,6 @@
 package gatt
 
 import (
-	"bytes"
 	"errors"
 	"log"
 )
@@ -197,44 +196,37 @@ func (a *AdvPacket) AppendManufacturerData(id uint16, b []byte) *AdvPacket {
 // AppendUUIDFit appends a BLE advertised service UUID
 // packet field if it fits in the packet, and reports whether the UUID fit.
 func (a *AdvPacket) AppendUUIDFit(uu []UUID) bool {
-	var b bytes.Buffer
-	for _, u := range uu {
-		b.Write(u.b)
-	}
-	a.AppendField(typeAllUUID16, b.Bytes())
-
 	// Iterate all UUIDs to see if they fit in the packet or not.
-	/*	fit, l := true, len(a.b)
-		for _, u := range uu {
-			if u.Equal(attrGAPUUID) || u.Equal(attrGATTUUID) {
-				continue
-			}
-			l += 2 + u.Len()
-			if l > MaxEIRPacketLength {
-				fit = false
-				break
-			}
+	fit, l := true, len(a.b)
+	for _, u := range uu {
+		if u.Equal(attrGAPUUID) || u.Equal(attrGATTUUID) {
+			continue
 		}
+		l += 2 + u.Len()
+		if l > MaxEIRPacketLength {
+			fit = false
+			break
+		}
+	}
 
-		// Append the UUIDs until they no longer fit.
-		for _, u := range uu {
-			if u.Equal(attrGAPUUID) || u.Equal(attrGATTUUID) {
-				continue
-			}
-			if len(a.b)+2+u.Len() > MaxEIRPacketLength {
-				break
-			}
-			switch l = u.Len(); {
-			case l == 2 && fit:
-				a.AppendField(typeAllUUID16, u.b)
-			case l == 16 && fit:
-				a.AppendField(typeAllUUID128, u.b)
-			case l == 2 && !fit:
-				a.AppendField(typeSomeUUID16, u.b)
-			case l == 16 && !fit:
-				a.AppendField(typeSomeUUID128, u.b)
-			}
+	// Append the UUIDs until they no longer fit.
+	for _, u := range uu {
+		if u.Equal(attrGAPUUID) || u.Equal(attrGATTUUID) {
+			continue
 		}
-	*/
-	return true
+		if len(a.b)+2+u.Len() > MaxEIRPacketLength {
+			break
+		}
+		switch l = u.Len(); {
+		case l == 2 && fit:
+			a.AppendField(typeAllUUID16, u.b)
+		case l == 16 && fit:
+			a.AppendField(typeAllUUID128, u.b)
+		case l == 2 && !fit:
+			a.AppendField(typeSomeUUID16, u.b)
+		case l == 16 && !fit:
+			a.AppendField(typeSomeUUID128, u.b)
+		}
+	}
+	return fit
 }
