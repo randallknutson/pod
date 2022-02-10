@@ -21,7 +21,15 @@ func UnmarshalSetUniqueID(data []byte) (*SetUniqueID, error) {
 	return ret, nil
 }
 
+func (g *SetUniqueID) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *SetUniqueID) IsResponseHardcoded() bool {
+	return true
+}
+
+func (g *SetUniqueID) DoesMutatePodState() bool {
 	return true
 }
 

@@ -17,8 +17,16 @@ func UnmarshalProgramAlerts(data []byte) (*ProgramAlerts, error) {
 	return ret, nil
 }
 
+func (g *ProgramAlerts) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *ProgramAlerts) IsResponseHardcoded() bool {
 	return false
+}
+
+func (g *ProgramAlerts) DoesMutatePodState() bool {
+	return true
 }
 
 func (g *ProgramAlerts) GetResponse() (response.Response, error) {

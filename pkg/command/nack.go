@@ -21,8 +21,16 @@ func (g *Nack) IsResponseHardcoded() bool {
 	return true
 }
 
+func (g *Nack) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *Nack) GetResponse() (response.Response, error) {
 	return &response.NackResponse{}, nil
+}
+
+func (g *Nack) DoesMutatePodState() bool {
+	return false
 }
 
 func (g *Nack) SetHeaderData(seq uint8, id []byte) error {

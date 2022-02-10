@@ -24,8 +24,16 @@ func UnmarshalStopDelivery(data []byte) (*StopDelivery, error) {
 	return ret, nil
 }
 
+func (g *StopDelivery) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *StopDelivery) IsResponseHardcoded() bool {
 	return false
+}
+
+func (g *StopDelivery) DoesMutatePodState() bool {
+	return true
 }
 
 func (g *StopDelivery) GetResponse() (response.Response, error) {

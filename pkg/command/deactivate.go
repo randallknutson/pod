@@ -17,9 +17,18 @@ func UnmarshalDeactivate(data []byte) (*Deactivate, error) {
 	return ret, nil
 }
 
+func (g *Deactivate) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *Deactivate) IsResponseHardcoded() bool {
 	return true
 }
+
+func (g *Deactivate) DoesMutatePodState() bool {
+	return true
+}
+
 
 func (g *Deactivate) GetResponse() (response.Response, error) {
 	// TODO improve responses

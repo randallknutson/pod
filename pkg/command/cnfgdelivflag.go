@@ -17,8 +17,16 @@ func UnmarshalCnfgDelivFlag(data []byte) (*CnfgDelivFlag, error) {
 	return ret, nil
 }
 
+func (g *CnfgDelivFlag) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *CnfgDelivFlag) IsResponseHardcoded() bool {
 	return true
+}
+
+func (g *CnfgDelivFlag) DoesMutatePodState() bool {
+	return false
 }
 
 func (g *CnfgDelivFlag) GetResponse() (response.Response, error) {

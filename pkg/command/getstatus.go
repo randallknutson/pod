@@ -21,12 +21,20 @@ func UnmarshalGetStatus(data []byte) (*GetStatus, error) {
 	return ret, nil
 }
 
+func (g *GetStatus) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *GetStatus) IsResponseHardcoded() bool {
 	if g.RequestType == 0 || g.RequestType == 7 || g.RequestType == 2 {
 		return false
 	} else {
 		return true
 	}
+}
+
+func (g *GetStatus) DoesMutatePodState() bool {
+	return false
 }
 
 // TODO remove this once all other message types return something other than

@@ -24,8 +24,16 @@ func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
 	return ret, nil
 }
 
+func (g *ProgramInsulin) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *ProgramInsulin) IsResponseHardcoded() bool {
 	return false
+}
+
+func (g *ProgramInsulin) DoesMutatePodState() bool {
+	return true
 }
 
 func (g *ProgramInsulin) GetResponse() (response.Response, error) {

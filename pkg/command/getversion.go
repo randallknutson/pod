@@ -24,8 +24,16 @@ func UnmarshalGetVersion(data []byte) (*GetVersion, error) {
 	return ret, nil
 }
 
+func (g *GetVersion) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *GetVersion) IsResponseHardcoded() bool {
 	return true
+}
+
+func (g *GetVersion) DoesMutatePodState() bool {
+	return false
 }
 
 func (g *GetVersion) GetResponse() (response.Response, error) {

@@ -49,11 +49,13 @@ var (
 
 type Command interface {
 	IsResponseHardcoded() bool
+	DoesMutatePodState() bool
 	GetResponse() (response.Response, error)
 	SetHeaderData(uint8, []byte) error
 	GetHeaderData() (cmdSeq uint8, requestID []byte, err error)
 	GetPayload() Payload
 	GetType() Type
+	GetSeq() uint8
 }
 
 type CommandReader struct {

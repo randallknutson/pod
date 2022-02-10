@@ -17,8 +17,16 @@ func UnmarshalProgramBeeps(data []byte) (*ProgramBeeps, error) {
 	return ret, nil
 }
 
+func (g *ProgramBeeps) GetSeq() uint8 {
+	return g.Seq
+}
+
 func (g *ProgramBeeps) IsResponseHardcoded() bool {
 	return false
+}
+
+func (g *ProgramBeeps) DoesMutatePodState() bool {
+	return true
 }
 
 func (g *ProgramBeeps) GetResponse() (response.Response, error) {

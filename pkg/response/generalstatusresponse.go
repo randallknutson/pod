@@ -79,10 +79,10 @@ func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 	response[4] = response[4] & 0b11111110 | uint8((r.Delivered & 0b1) << 7)
 
   // LastProgSeqNum
-	response[4] = response[4] & 0b10001111 | ((r.LastProgSeqNum & 0xf) << 3)
+	response[4] = response[4] & 0b10000111 | ((r.LastProgSeqNum & 0xf) << 3)
 
 	// Bolus remaining pulses
-	response[4] = response[4] & 0b11110000 | uint8(r.BolusRemaining >> 8)
+	response[4] = response[4] & 0b11111000 | uint8((r.BolusRemaining >> 8) & 0b111)
 	response[5] = uint8(r.BolusRemaining & 0xff)
 
 	// Set active alert slot bits

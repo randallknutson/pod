@@ -266,6 +266,10 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 
 		p.handleCommand(cmd)
 
+		if cmd.DoesMutatePodState() {
+				p.state.LastProgSeqNum = cmd.GetSeq()
+		}
+
 		var rsp response.Response
 		if cmd.IsResponseHardcoded() {
 			rsp, err = cmd.GetResponse()
@@ -332,6 +336,7 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 func (p *Pod) makeGeneralStatusResponse() response.Response {
 	return &response.GeneralStatusResponse{
 		Seq: 0,
+		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
 		BolusActive:         p.state.BolusActive,
@@ -347,6 +352,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 func (p *Pod) makeDetailedStatusResponse() response.Response {
 	return &response.DetailedStatusResponse{
 		Seq: 0,
+		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
 		BolusActive:         p.state.BolusActive,
