@@ -40,11 +40,6 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 
 	state := &PODState{
 		Reservoir:           150 / 0.05,
-		BolusActive:         false,
-		BasalActive:         false,
-		TempBasalActive:     false,
-		ExtendedBolusActive: false,
-		ActiveAlertSlots:    0x00,
 		ActivationTime:      time.Now(),
 		Filename:            stateFile,
 	}
@@ -345,7 +340,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
 		Delivered:           p.state.Delivered,
-		ActiveTimeMinutes:   p.state.MinutesActive(),
+		MinutesActive:       p.state.MinutesActive(),
 	}
 }
 
@@ -361,7 +356,7 @@ func (p *Pod) makeDetailedStatusResponse() response.Response {
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
 		Delivered:           p.state.Delivered,
-		ActiveTimeMinutes:   p.state.MinutesActive(),
+		MinutesActive:       p.state.MinutesActive(),
 		FaultEvent:          p.state.FaultEvent,
 		FaultEventTime:      p.state.FaultTime,
 	}

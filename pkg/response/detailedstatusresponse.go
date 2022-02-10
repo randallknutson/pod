@@ -15,12 +15,11 @@ type DetailedStatusResponse struct {
 	Delivered           uint16
 	BolusRemaining      uint16
 	IsFaulted           bool
-	ActiveTimeMinutes   uint16
+	MinutesActive       uint16
 	Reservoir           uint16
 	LastProgSeqNum      uint8
 	FaultEvent          uint8
 	FaultEventTime      uint16
-	TimeActive          uint16
 }
 
 func (r *DetailedStatusResponse) Marshal() ([]byte, error) {
@@ -76,8 +75,8 @@ func (r *DetailedStatusResponse) Marshal() ([]byte, error) {
 	}
 
 	// Minutes since activation
-	response[15] = byte(r.TimeActive >> 8)
-	response[16] = byte(r.TimeActive & 0xff)
+	response[15] = byte(r.MinutesActive >> 8)
+	response[16] = byte(r.MinutesActive & 0xff)
 
 	// Set active alert slot bits
 	response[6] = r.Alerts

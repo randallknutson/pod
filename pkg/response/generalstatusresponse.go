@@ -53,10 +53,9 @@ type GeneralStatusResponse struct {
 	Delivered           uint16
 	BolusRemaining      uint16
 	IsFaulted           bool
-	ActiveTimeMinutes   uint16
+	MinutesActive       uint16
 	Reservoir           uint16
 	LastProgSeqNum      uint8
-	TimeActive          uint16
 }
 
 func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
@@ -97,8 +96,8 @@ func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 	response[7] = response[7]&0b01111111 | (r.Alerts << 7)
 
 	// Time Active Minutes
-	response[7] = response[7]&0b10000000 | uint8((r.TimeActive>>6)&0b01111111)
-	response[8] = response[8]&0b00000011 | uint8((r.TimeActive<<2)&0b11111100)
+	response[7] = response[7]&0b10000000 | uint8((r.MinutesActive>>6)&0b01111111)
+	response[8] = response[8]&0b00000011 | uint8((r.MinutesActive<<2)&0b11111100)
 
 	if r.Reservoir < (50 / 0.05) {
 		response[8] = response[8]&0b11111100 | uint8(r.Reservoir>>8)
