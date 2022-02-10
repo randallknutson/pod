@@ -65,10 +65,10 @@ func (r *GeneralStatusResponse) Marshal() ([]byte, error) {
 
 	// Delivery bits
 	response[1] = response[1] & 0b1111
-	if r.ExtendedBolusActive { response[1] = response[1] & (1<<7) }
-	if r.BolusActive         { response[1] = response[1] & (1<<6) }
-	if r.TempBasalActive     { response[1] = response[1] & (1<<5) }
-	if r.BasalActive         { response[1] = response[1] & (1<<4) }
+	if r.ExtendedBolusActive { response[1] = response[1] | (1<<7) }
+	if r.BolusActive         { response[1] = response[1] | (1<<6) }
+	if r.TempBasalActive     { response[1] = response[1] | (1<<5) }
+	if r.BasalActive         { response[1] = response[1] | (1<<4) }
 
 	// PodProgress
 	response[1] = response[1] & 0b11110000 | (byte(r.PodProgress) & 0b1111)

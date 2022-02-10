@@ -35,10 +35,10 @@ func (r *DetailedStatusResponse) Marshal() ([]byte, error) {
 	response[3] = byte(r.PodProgress)
 
 	// Delivery bits
-	if r.BasalActive         { response[4] = response[4] & (1<<0) }
-	if r.TempBasalActive     { response[4] = response[4] & (1<<1) }
-	if r.BolusActive         { response[4] = response[4] & (1<<2) }
-	if r.ExtendedBolusActive { response[4] = response[4] & (1<<3) }
+	if r.BasalActive         { response[4] = response[4] | (1<<0) }
+	if r.TempBasalActive     { response[4] = response[4] | (1<<1) }
+	if r.BolusActive         { response[4] = response[4] | (1<<2) }
+	if r.ExtendedBolusActive { response[4] = response[4] | (1<<3) }
 
 	// Bolus remaining pulses
 	response[5] = byte(r.BolusRemaining >> 8)
