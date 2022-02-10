@@ -2,8 +2,11 @@
 
 Fake pod implementation
 
-This was forked to loopnlearn as part of the development for dash-pods with iOS.
 * The original 0pen-dash repository from which this was forked was removed by the owner.
+
+* This fork has diverged much from the structure of the previous implementation, which was based on hardcoded responses. This version attempts to have a state the mimics more pod details like reservoir level, total delivery, alerts, and faults, and builds dynamic responses based on that state.
+
+* It also has a websocket based API that can used by a separate [NodeJS/React frontend](https://github.com/ps2/pod_simulator_frontend), that is installed an run separately for now.
 
 Requirements:
 1. Version of iOS code that handles this - under development - not ready for others to use
@@ -22,11 +25,11 @@ sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
 
 ## Run simulator on the pi
 
-The simulator runs until 
+The simulator runs until
 * aborted with a control-C
 * pod is deactivated on the phone
 * quit out of phone app after establishing BLE connection
- 
+
 The simulator may error out unexpectedly. Just restart it and it should reconnect with the app (do not use the `-fresh` flag in this case.)
 
 When in doubt, control-C and restart it.
