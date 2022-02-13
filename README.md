@@ -6,6 +6,8 @@ Fake pod implementation
 
 * This fork has diverged much from the structure of the previous implementation, which was based on hardcoded responses. This version attempts to have a state the mimics more pod details like reservoir level, total delivery, alerts, and faults, and builds dynamic responses based on that state.
 
+* This version also mimics a behavior we see in real pods where the pod disconnects every 3 minutes; this can be used with iOS hooks to make a heartbeat to run Loop in situations where a BLE CGM is not available.
+
 * It also has a websocket based API that can used by a separate [NodeJS/React frontend](https://github.com/ps2/pod_simulator_frontend), that is installed an run separately for now.
 
 Requirements:

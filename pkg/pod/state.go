@@ -19,7 +19,8 @@ type PODState struct {
 	MsgSeq         uint8  `toml:"msg_seq"`   // TODO: is this the same as nonceSeq?
 	CmdSeq         uint8  `toml:"cmd_seq"`   // TODO: are all those 3 the same number ???
 	NonceSeq       uint64 `toml:"nonce_seq"` // or 16?
-	LastProgSeqNum uint8
+	
+	LastProgSeqNum uint8  `toml:"last_prog_seq"`
 
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`

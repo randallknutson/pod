@@ -263,15 +263,7 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 		}
 		log.Tracef("pkg pod; command pod message body = %x", pMsg.MsgBodyCommand)
 
-		if crashBeforeProcessingCommand {
-			log.Fatalf("pkg pod; Crashing before processing command")
-		}
-
 		p.handleCommand(cmd)
-
-		if crashBeforeProcessingCommand {
-			log.Fatalf("pkg pod; Crashing after processing command")
-		}
 
 		var rsp response.Response
 		if cmd.IsResponseHardcoded() {
@@ -337,6 +329,8 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 }
 
 func (p *Pod) makeGeneralStatusResponse() response.Response {
+	log.Debugf("pkg pod; General status response LastProgSeqNum = %d", p.state.LastProgSeqNum)
+
 	return &response.GeneralStatusResponse{
 		Seq:                 0,
 		LastProgSeqNum:      p.state.LastProgSeqNum,
@@ -390,6 +384,9 @@ func (p *Pod) handleCommand(cmd command.Command) {
 	case *command.SetUniqueID:
 		p.state.PodProgress = response.PodProgressPairingCompleted
 	case *command.ProgramInsulin:
+		if crashBeforeProcessingCommand {
+			log.Fatalf("pkg pod; Crashing before processing command with sequence %d", c.GetSeq())
+		}
 		if p.state.PodProgress < response.PodProgressPriming {
 			// this must be the prime command
 			p.state.PodProgress = response.PodProgressPriming
@@ -414,6 +411,13 @@ func (p *Pod) handleCommand(cmd command.Command) {
 			p.state.Delivered += c.Pulses
 			p.state.Reservoir -= c.Pulses
 		}
+
+		if crashAfterProcessingCommand {
+			p.state.LastProgSeqNum = cmd.GetSeq() // Normally this happens below, but we do it here in this special case
+			p.state.Save()
+			log.Fatalf("pkg pod; Crashing after processing command with sequence %d", c.GetSeq())
+		}
+
 	case *command.GetStatus:
 		// type 7 returns page0, dash specific type
 		if c.RequestType == 0 || c.RequestType == 7 {
@@ -438,12 +442,12 @@ func (p *Pod) handleCommand(cmd command.Command) {
 			p.state.BasalActive = false
 		}
 	case *command.SilenceAlerts:
-		log.Debugf("SilenceAlerts")
 		p.state.ActiveAlertSlots = p.state.ActiveAlertSlots &^ c.AlertMask
 	default:
 		// No action
 	}
 	if cmd.DoesMutatePodState() {
+		log.Debugf("pkg pod; Updating LastProgSeqNum = %d", cmd.GetSeq())
 		p.state.LastProgSeqNum = cmd.GetSeq()
 	}
 }
