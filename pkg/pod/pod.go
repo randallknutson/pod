@@ -387,6 +387,8 @@ func (p *Pod) handleCommand(cmd command.Command) {
 		if crashBeforeProcessingCommand {
 			log.Fatalf("pkg pod; Crashing before processing command with sequence %d", c.GetSeq())
 		}
+		log.Debugf("pkg pod; ProgramInsulin: PodProgress = %d", p.state.PodProgress)
+
 		if p.state.PodProgress < response.PodProgressPriming {
 			// this must be the prime command
 			p.state.PodProgress = response.PodProgressPriming
@@ -419,17 +421,9 @@ func (p *Pod) handleCommand(cmd command.Command) {
 		}
 
 	case *command.GetStatus:
-		// type 7 returns page0, dash specific type
-		if c.RequestType == 0 || c.RequestType == 7 {
-			if p.state.PodProgress <= 4 {
-				// PDM uses a type 7 get status after prime
-				p.state.PodProgress = 5
-			} else {
-				if p.state.PodProgress < response.PodProgressRunningAbove50U {
-					p.state.PodProgress = response.PodProgressRunningAbove50U
-				}
-			}
-		}
+		if p.state.PodProgress == response.PodProgressInsertingCannula {
+			p.state.PodProgress = response.PodProgressRunningAbove50U
+    }
 	case *command.StopDelivery:
 		if c.StopBolus {
 			p.state.BolusActive = false
