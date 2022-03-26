@@ -331,13 +331,15 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 func (p *Pod) makeGeneralStatusResponse() response.Response {
 	log.Debugf("pkg pod; General status response LastProgSeqNum = %d", p.state.LastProgSeqNum)
 
+	var now = time.Now()
+
 	return &response.GeneralStatusResponse{
 		Seq:                 0,
 		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
-		BolusActive:         p.state.BolusActive,
-		TempBasalActive:     p.state.TempBasalActive,
+		BolusActive:         p.state.BolusEnd.After(now),
+		TempBasalActive:     p.state.TempBasalEnd.After(now),
 		BasalActive:         p.state.BasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
@@ -347,13 +349,16 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 }
 
 func (p *Pod) makeDetailedStatusResponse() response.Response {
+
+	var now = time.Now()
+
 	return &response.DetailedStatusResponse{
 		Seq:                 0,
 		LastProgSeqNum:      p.state.LastProgSeqNum,
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
-		BolusActive:         p.state.BolusActive,
-		TempBasalActive:     p.state.TempBasalActive,
+		BolusActive:         p.state.BolusEnd.After(now),
+		TempBasalActive:     p.state.TempBasalEnd.After(now),
 		BasalActive:         p.state.BasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
@@ -407,12 +412,19 @@ func (p *Pod) handleCommand(cmd command.Command) {
 			p.state.BasalActive = true
 		}
 
+		// Programming temp basal
+		if c.TableNum == 1 {
+			p.state.TempBasalEnd = time.Now().Add(time.Duration(c.Duration) * time.Hour / 2)
+		}
+
 		// Programming bolus; just immediately decrement reservoir
 		// Would be nice to eventually simulate actual pulses over time.
 		if c.TableNum == 2 {
 			p.state.Delivered += c.Pulses
 			p.state.Reservoir -= c.Pulses
+			p.state.BolusEnd = time.Now().Add(time.Duration(c.Pulses) * time.Second * 2)
 		}
+
 
 		if crashAfterProcessingCommand {
 			p.state.LastProgSeqNum = cmd.GetSeq() // Normally this happens below, but we do it here in this special case
@@ -426,11 +438,11 @@ func (p *Pod) handleCommand(cmd command.Command) {
     }
 	case *command.StopDelivery:
 		if c.StopBolus {
-			p.state.BolusActive = false
+			p.state.BolusEnd = time.Time{}
 			p.state.ExtendedBolusActive = false
 		}
 		if c.StopTempBasal {
-			p.state.TempBasalActive = false
+			p.state.TempBasalEnd = time.Time{}
 		}
 		if c.StopBasal {
 			p.state.BasalActive = false

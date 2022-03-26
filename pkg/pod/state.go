@@ -19,7 +19,7 @@ type PODState struct {
 	MsgSeq         uint8  `toml:"msg_seq"`   // TODO: is this the same as nonceSeq?
 	CmdSeq         uint8  `toml:"cmd_seq"`   // TODO: are all those 3 the same number ???
 	NonceSeq       uint64 `toml:"nonce_seq"` // or 16?
-	
+
 	LastProgSeqNum uint8  `toml:"last_prog_seq"`
 
 	NoncePrefix []byte `toml:"nonce_prefix"`
@@ -36,10 +36,10 @@ type PODState struct {
 
 	// At some point these could be replaced with details
 	// of each kind of delivery (volume, start time, schedule, etc)
-	BolusActive         bool `toml:"bolus_active"`
-	BasalActive         bool `toml:"basal_active"`
-	TempBasalActive     bool `toml:"temp_basal_active"`
-	ExtendedBolusActive bool `toml:"extended_bolus_active"`
+	BolusEnd            time.Time `toml:"bolus_end"`
+	TempBasalEnd        time.Time `toml:"temp_basal_end"`
+	ExtendedBolusActive bool      `toml:"extended_bolus_active"`
+	BasalActive         bool      `toml:"basal_active"`
 
 	Filename string
 }

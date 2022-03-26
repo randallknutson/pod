@@ -10,6 +10,7 @@ type ProgramInsulin struct {
 	ID       []byte
 	TableNum byte
 	Pulses   uint16
+	Duration uint8 // Number of half hour increments
 }
 
 func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
@@ -20,6 +21,7 @@ func UnmarshalProgramInsulin(data []byte) (*ProgramInsulin, error) {
 	// 1a LL NNNNNNNN 02 CCCC HH SSSS PPPP 0ppp
 	//    00 01020304 05 0607 08 0910 1112 1314
 	ret.TableNum = data[5]
+	ret.Duration = data[8]
 	ret.Pulses = (uint16(data[11]) << 8) + uint16(data[12])
 	return ret, nil
 }
