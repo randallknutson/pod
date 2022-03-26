@@ -332,6 +332,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 	log.Debugf("pkg pod; General status response LastProgSeqNum = %d", p.state.LastProgSeqNum)
 
 	var now = time.Now()
+	var tempBasalActive = p.state.TempBasalEnd.After(now)
 
 	return &response.GeneralStatusResponse{
 		Seq:                 0,
@@ -339,8 +340,8 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
 		BolusActive:         p.state.BolusEnd.After(now),
-		TempBasalActive:     p.state.TempBasalEnd.After(now),
-		BasalActive:         p.state.BasalActive,
+		TempBasalActive:     tempBasalActive,
+		BasalActive:         p.state.BasalActive && !tempBasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
 		Delivered:           p.state.Delivered,
@@ -351,6 +352,7 @@ func (p *Pod) makeGeneralStatusResponse() response.Response {
 func (p *Pod) makeDetailedStatusResponse() response.Response {
 
 	var now = time.Now()
+	var tempBasalActive = p.state.TempBasalEnd.After(now)
 
 	return &response.DetailedStatusResponse{
 		Seq:                 0,
@@ -358,8 +360,8 @@ func (p *Pod) makeDetailedStatusResponse() response.Response {
 		Reservoir:           p.state.Reservoir,
 		Alerts:              p.state.ActiveAlertSlots,
 		BolusActive:         p.state.BolusEnd.After(now),
-		TempBasalActive:     p.state.TempBasalEnd.After(now),
-		BasalActive:         p.state.BasalActive,
+		TempBasalActive:     tempBasalActive,
+		BasalActive:         p.state.BasalActive && !tempBasalActive,
 		ExtendedBolusActive: p.state.ExtendedBolusActive,
 		PodProgress:         p.state.PodProgress,
 		Delivered:           p.state.Delivered,
