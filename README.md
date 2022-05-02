@@ -4,18 +4,19 @@ Fake pod implementation
 
 * The original 0pen-dash repository from which this was forked was removed by the owner.
 
-* This fork has diverged much from the structure of the previous implementation, which was based on hardcoded responses. This version attempts to have a state the mimics more pod details like reservoir level, total delivery, alerts, and faults, and builds dynamic responses based on that state.
+* This fork has diverged from the original implementation, which was based on hardcoded responses. This version mimics more pod details like reservoir level, total delivery, alerts, and faults, and builds dynamic responses based on that state.
 
-* This version also mimics a behavior we see in real pods where the pod disconnects every 3 minutes; this can be used with iOS hooks to make a heartbeat to run Loop in situations where a BLE CGM is not available.
+* This version also mimics a behavior we see in some DASH pods where the pod disconnects every 3 minutes; this can be used with iOS hooks to make a heartbeat to run Loop in situations where a BLE CGM is not available. 
 
-* It also has a websocket based API that can used by a separate [NodeJS/React frontend](https://github.com/ps2/pod_simulator_frontend), that is installed an run separately for now.
+* It also has a websocket based API that can used by a separate [NodeJS/React frontend](https://github.com/ps2/pod_simulator_frontend), that is installed and run separately for now.
 
 Requirements:
-1. Version of iOS code that handles this - under development - not ready for others to use
-2. Raspberry pi with Bluetooth BLE (using a pi4 right now)
+1. Version of iOS code (Loop app) that will interact with this simulator - Loop dev branch or FreeAPS freeaps_dev branch
+2. Raspberry pi with Bluetooth BLE (using a pi3b or pi4 right now)
 3. The user must have sudo privilege on the pi
 4. Install the go language on your device (search internet for procedure)
-  *  You can build on pi directly or use cross-compiler and scp the executable
+
+You can build on pi directly or use cross-compiler and scp the executable
 
 ## Build on the pi
 
@@ -27,7 +28,7 @@ sudo setcap 'cap_net_raw,cap_net_admin=eip' ./pod
 
 ## Run simulator on the pi
 
-The simulator runs until
+The simulator runs until:
 * aborted with a control-C
 * pod is deactivated on the phone
 * quit out of phone app after establishing BLE connection
@@ -36,19 +37,24 @@ The simulator may error out unexpectedly. Just restart it and it should reconnec
 
 When in doubt, control-C and restart it.
 
-To pair a new simulated dash pod:
+To pair a new simulated dash pod, use this command on the pi:
 ```
-./pod -fresh -q
-```
-
-Wait until getting this notification before attempting to pair with the app:
-```
-enabled notifications for CMD:
-enabled notifications for DATA:
-*** OK to send commands from the phone app ***
+./pod -q -fresh 
 ```
 
-To restore communication with an existing simulated dash pod and wait for the messages shown above:
+Timing for a new pod:
+* start the pairing process in the app (by tapping on Pair Pod button)
+* hit return on `./pod -q -fresh` command line on the pi
+* if it fails to connect, wait for pairing attempt to fail and try again
+* if it still fails, you can switch from Omnipod DASH on the app, add it back and try again
+
+Working with an active pod simulator:
+* If you need to quit and restart the app or to build the app fresh, it is best to control-C out of the pod simulator on the pi
+* Restart or rebuild the app, then shortly after app opens, try to restore communication
+* Otherwise, the app and simulator may stop being able to communicate
+* In this case, you need to Deactivate Pod using app and add a new one
+
+To restore communication between the app and an existing simulated dash pod, issue this command on the pi as soon as possible after resuming the app:
 ```
 ./pod -q
 ```
