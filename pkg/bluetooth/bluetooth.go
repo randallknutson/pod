@@ -13,7 +13,6 @@ import (
 	"github.com/avereha/pod/pkg/message"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/paypal/gatt"
-	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,13 +48,13 @@ type Ble struct {
 }
 
 var DefaultServerOptions = []gatt.Option{
-	gatt.LnxMaxConnections(1),
-	gatt.LnxDeviceID(-1, true),
-	gatt.LnxSetAdvertisingParameters(&cmd.LESetAdvertisingParameters{
-		AdvertisingIntervalMin: 0x00f4,
-		AdvertisingIntervalMax: 0x00f4,
-		AdvertisingChannelMap:  0x7,
-	}),
+	// gatt.LnxMaxConnections(1),
+	// gatt.LnxDeviceID(-1, true),
+	// gatt.LnxSetAdvertisingParameters(&cmd.LESetAdvertisingParameters{
+	// 	AdvertisingIntervalMin: 0x00f4,
+	// 	AdvertisingIntervalMax: 0x00f4,
+	// 	AdvertisingChannelMap:  0x7,
+	// }),
 }
 
 func New(adapterID string, podId []byte) (*Ble, error) {
@@ -172,28 +171,25 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
 
-			podIdServiceOne := gatt.UUID16(0xffff)
-			podIdServiceTwo := gatt.UUID16(0xfffe)
-			if podId != nil {
-				podIdServiceOne = gatt.UUID16(binary.BigEndian.Uint16(podId[0:2]))
-				podIdServiceTwo = gatt.UUID16(binary.BigEndian.Uint16(podId[2:4]))
+			podIdArray, err := hex.DecodeString("fffffffe")
+			if err != nil {
+				log.Fatalf("pkg bluetooth; could not parse default address: %s", err)
 			}
 
+			if podId != nil {
+				podIdArray = podId
+			}
+
+			// CE1F 923D-C539-48EA-7300-0AFF FFFF FE00
 			// Advertise device name and service's UUIDs.
-			err = d.AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
-				gatt.UUID16(0x4024),
-
-				gatt.UUID16(0x2470),
-				gatt.UUID16(0x000a),
-
-				podIdServiceOne,
-				podIdServiceTwo,
-
-				// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
-				gatt.UUID16(0x0814),
-				gatt.UUID16(0x6DB1),
-				gatt.UUID16(0x0006),
-				gatt.UUID16(0xE451),
+			err = d.AdvertiseNameAndServices("AP "+hex.EncodeToString(podIdArray)+" 0A95B6110002761B", []gatt.UUID{
+				gatt.UUID16(0xCE1F),
+				gatt.UUID16(0x923D),
+				gatt.UUID16(0x48EA),
+				gatt.UUID16(0x7300),
+				gatt.UUID16(binary.BigEndian.Uint16(append([]byte{0x0a}, 0x0a))),
+				gatt.UUID16(binary.BigEndian.Uint16(podId[1:3])),
+				gatt.UUID16(binary.BigEndian.Uint16(append(podId[3:4], 0x00))),
 			})
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
