@@ -172,14 +172,14 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				})
 
 			h := gatt.NewService(service2UUID)
-			hbCharacteristic := h.AddCharacteristic(heartbeatCharUUID)
+			hbCharacteristic := gatt.NewCharacteristic(heartbeatCharUUID, h, 0, 0x00, 0x00)
+			h.AddCharacteristic(hbCharacteristic.UUID())
+			hbCharacteristic.HandleReadFunc(
+				func(rsp gatt.ResponseWriter, req *gatt.ReadRequest) {
 
-			err = d.AddService(s)
-			if err != nil {
-				log.Fatalf("pkg bluetooth; could not add service: %s", err)
-			}
+				})
 
-			err = d.AddService(h)
+			err = d.SetServices([]*gatt.Service{s, h})
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
@@ -219,19 +219,7 @@ func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, f
 	log.Tracef("podIdServiceOne", gatt.UUID16(binary.BigEndian.Uint16(id[0:2])))
 	log.Tracef("podIdServiceTwo", gatt.UUID16(binary.BigEndian.Uint16(id[2:4])))
 	err := (*b.device).AdvertiseNameAndServices("AP "+strings.ToUpper(hex.EncodeToString(id))+" 0A95B6110002761B", []gatt.UUID{
-		gatt.UUID16(0x4024),
-
-		gatt.UUID16(0x2470),
-		gatt.UUID16(0x000a),
-
-		gatt.UUID16(binary.BigEndian.Uint16(id[0:2])),
-		gatt.UUID16(binary.BigEndian.Uint16(id[2:4])),
-
-		// these 4 are copied from lotNo and lotSeq from fixed string in versionresponse.go
-		gatt.UUID16(0x0814),
-		gatt.UUID16(0x6DB1),
-		gatt.UUID16(0x0006),
-		gatt.UUID16(0xE451),
+		gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(id) + "00"),
 	})
 	if err != nil {
 		log.Infof("pkg bluetooth; could not re-advertise: %s", err)
