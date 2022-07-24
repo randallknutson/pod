@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"strings"
 	"sync"
 	"time"
 
@@ -180,16 +181,10 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				podIdArray = podId
 			}
 
-			// CE1F 923D-C539-48EA-7300-0AFF FFFF FE00
+			// CE1F923D-C539-48EA-7300-0AFFFFFFFE00
 			// Advertise device name and service's UUIDs.
-			err = d.AdvertiseNameAndServices("AP "+hex.EncodeToString(podIdArray)+" 0A95B6110002761B", []gatt.UUID{
-				gatt.UUID16(0xCE1F),
-				gatt.UUID16(0x923D),
-				gatt.UUID16(0x48EA),
-				gatt.UUID16(0x7300),
-				gatt.UUID16(binary.BigEndian.Uint16(append([]byte{0x0a}, 0x0a))),
-				gatt.UUID16(binary.BigEndian.Uint16(podId[1:3])),
-				gatt.UUID16(binary.BigEndian.Uint16(append(podId[3:4], 0x00))),
+			err = d.AdvertiseNameAndServices("AP "+strings.ToUpper(hex.EncodeToString(podIdArray))+" 0A95B6110002761B", []gatt.UUID{
+				gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(podIdArray) + "00"),
 			})
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
@@ -211,7 +206,7 @@ func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, f
 
 	log.Tracef("podIdServiceOne", gatt.UUID16(binary.BigEndian.Uint16(id[0:2])))
 	log.Tracef("podIdServiceTwo", gatt.UUID16(binary.BigEndian.Uint16(id[2:4])))
-	err := (*b.device).AdvertiseNameAndServices(" :: Fake POD ::", []gatt.UUID{
+	err := (*b.device).AdvertiseNameAndServices("AP "+strings.ToUpper(hex.EncodeToString(id))+" 0A95B6110002761B", []gatt.UUID{
 		gatt.UUID16(0x4024),
 
 		gatt.UUID16(0x2470),
