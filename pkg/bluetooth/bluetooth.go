@@ -14,6 +14,7 @@ import (
 	"github.com/avereha/pod/pkg/message"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/paypal/gatt"
+	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,13 +50,13 @@ type Ble struct {
 }
 
 var DefaultServerOptions = []gatt.Option{
-	// gatt.LnxMaxConnections(1),
-	// gatt.LnxDeviceID(-1, true),
-	// gatt.LnxSetAdvertisingParameters(&cmd.LESetAdvertisingParameters{
-	// 	AdvertisingIntervalMin: 0x00f4,
-	// 	AdvertisingIntervalMax: 0x00f4,
-	// 	AdvertisingChannelMap:  0x7,
-	// }),
+	gatt.LnxMaxConnections(1),
+	gatt.LnxDeviceID(-1, true),
+	gatt.LnxSetAdvertisingParameters(&cmd.LESetAdvertisingParameters{
+		AdvertisingIntervalMin: 0x00f4,
+		AdvertisingIntervalMax: 0x00f4,
+		AdvertisingChannelMap:  0x7,
+	}),
 }
 
 func New(adapterID string, podId []byte) (*Ble, error) {
@@ -126,7 +127,10 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 		case gatt.StatePoweredOn:
 			var serviceUUID = gatt.MustParseUUID("1a7e-4024-e3ed-4464-8b7e-751e03d0dc5f")
 			var cmdCharUUID = gatt.MustParseUUID("1a7e-2441-e3ed-4464-8b7e-751e03d0dc5f")
-			var dataCharUUID = gatt.MustParseUUID("1a7e-2442-e3ed-4464-8b7e-751e03d0dc5f")
+			var dataCharUUID = gatt.MustParseUUID("1a7e-2443-e3ed-4464-8b7e-751e03d0dc5f")
+
+			var service2UUID = gatt.MustParseUUID("ECF301E2-674B-4474-94D0-364F3AA653E6")
+			var heartbeatCharUUID = gatt.MustParseUUID("7DED7A6C-CA72-46A7-A3A2-6061F6FDCAEB")
 
 			s := gatt.NewService(serviceUUID)
 
@@ -167,7 +171,15 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 					return 0
 				})
 
+			h := gatt.NewService(service2UUID)
+			hbCharacteristic := h.AddCharacteristic(heartbeatCharUUID)
+
 			err = d.AddService(s)
+			if err != nil {
+				log.Fatalf("pkg bluetooth; could not add service: %s", err)
+			}
+
+			err = d.AddService(h)
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not add service: %s", err)
 			}
