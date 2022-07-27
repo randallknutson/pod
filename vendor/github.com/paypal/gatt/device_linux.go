@@ -170,6 +170,7 @@ func (d *device) AdvertiseNameServicesMfgData(name string, uu []UUID, mfg []byte
 	a := &AdvPacket{}
 	a.AppendFlags(flagGeneralDiscoverable | flagLEOnly)
 	a.AppendUUIDFit(uu)
+	a.AppendField(typeManufacturerData, mfg)
 
 	if len(a.b)+len(name)+2 < MaxEIRPacketLength {
 		a.AppendName(name)
@@ -177,7 +178,6 @@ func (d *device) AdvertiseNameServicesMfgData(name string, uu []UUID, mfg []byte
 	} else {
 		a := &AdvPacket{}
 		a.AppendName(name)
-		a.AppendField(typeManufacturerData, mfg)
 		d.scanResp = &cmd.LESetScanResponseData{
 			ScanResponseDataLength: uint8(a.Len()),
 			ScanResponseData:       a.Bytes(),
