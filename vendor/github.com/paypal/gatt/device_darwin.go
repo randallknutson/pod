@@ -103,6 +103,18 @@ func (d *device) AdvertiseNameAndServices(name string, ss []UUID) error {
 	return nil
 }
 
+func (d *device) AdvertiseNameServicesMfgData(name string, ss []UUID, mfg []byte) error {
+	us := uuidSlice(ss)
+	rsp := d.sendReq(8, xpc.Dict{
+		"kCBAdvDataLocalName":    name,
+		"kCBAdvDataServiceUUIDs": us},
+	)
+	if res := rsp.MustGetInt("kCBMsgArgResult"); res != 0 {
+		return errors.New("FIXME: Advertise error")
+	}
+	return nil
+}
+
 func (d *device) AdvertiseIBeaconData(data []byte) error {
 	var utsname xpc.Utsname
 	xpc.Uname(&utsname)

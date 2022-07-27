@@ -14,7 +14,6 @@ import (
 	"github.com/avereha/pod/pkg/message"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/paypal/gatt"
-	"github.com/paypal/gatt/linux/cmd"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -195,9 +194,14 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 
 			// CE1F923D-C539-48EA-7300-0AFFFFFFFE00
 			// Advertise device name and service's UUIDs.
-			err = d.AdvertiseNameAndServices("AP "+strings.ToUpper(hex.EncodeToString(podIdArray))+" 0A95B6110002761B", []gatt.UUID{
-				gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(podIdArray) + "00"),
-			})
+			mfgData, err := hex.DecodeString("60030001000000")
+			err = d.AdvertiseNameServicesMfgData(
+				"AP "+strings.ToUpper(hex.EncodeToString(podIdArray))+" 0A95B6110002761B",
+				[]gatt.UUID{
+					gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(podIdArray) + "00"),
+				},
+				mfgData,
+			)
 			if err != nil {
 				log.Fatalf("pkg bluetooth; could not advertise: %s", err)
 			}

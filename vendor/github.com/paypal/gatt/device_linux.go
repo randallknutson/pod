@@ -166,6 +166,27 @@ func (d *device) AdvertiseNameAndServices(name string, uu []UUID) error {
 	return d.Advertise(a)
 }
 
+func (d *device) AdvertiseNameServicesMfgData(name string, uu []UUID, mfg []byte) error {
+	a := &AdvPacket{}
+	a.AppendFlags(flagGeneralDiscoverable | flagLEOnly)
+	a.AppendUUIDFit(uu)
+
+	if len(a.b)+len(name)+2 < MaxEIRPacketLength {
+		a.AppendName(name)
+		d.scanResp = nil
+	} else {
+		a := &AdvPacket{}
+		a.AppendName(name)
+		a.AppendField(typeManufacturerData, mfg)
+		d.scanResp = &cmd.LESetScanResponseData{
+			ScanResponseDataLength: uint8(a.Len()),
+			ScanResponseData:       a.Bytes(),
+		}
+	}
+
+	return d.Advertise(a)
+}
+
 func (d *device) AdvertiseIBeaconData(b []byte) error {
 	a := &AdvPacket{}
 	a.AppendFlags(flagGeneralDiscoverable | flagLEOnly)
