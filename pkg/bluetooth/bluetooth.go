@@ -126,15 +126,16 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 		switch s {
 		case gatt.StatePoweredOn:
 			var serviceUUID = gatt.MustParseUUID("1a7e-4024-e3ed-4464-8b7e-751e03d0dc5f")
-			var cmdCharUUID = gatt.MustParseUUID("1a7e-2441-e3ed-4464-8b7e-751e03d0dc5f")
-			var dataCharUUID = gatt.MustParseUUID("1a7e-2443-e3ed-4464-8b7e-751e03d0dc5f")
+			var cmdCharUUID = gatt.MustParseUUID("1a7e-2441-e3ed-4464-8b7e-751e03d0dc5f")  // 0x2E // h 0x000d // vh 0x000e
+			var dataCharUUID = gatt.MustParseUUID("1a7e-2443-e3ed-4464-8b7e-751e03d0dc5f") // 0x16 // h 0x0010 // vh 0x0011
 
 			var service2UUID = gatt.MustParseUUID("ECF301E2-674B-4474-94D0-364F3AA653E6")
-			var heartbeatCharUUID = gatt.MustParseUUID("7DED7A6C-CA72-46A7-A3A2-6061F6FDCAEB")
+			var heartbeatCharUUID = gatt.MustParseUUID("7DED7A6C-CA72-46A7-A3A2-6061F6FDCAEB") // 0x22
 
 			s := gatt.NewService(serviceUUID)
 
-			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
+			cmdCharacteristic := gatt.NewCharacteristic(cmdCharUUID, s, 0x2E, 0x000d, 0x000e)
+			s.AddCharacteristic(cmdCharacteristic.UUID())
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
 					log.Tracef("received CMD,  %x", data)
@@ -152,7 +153,8 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 					log.Infof("pkg bluetooth; handling CMD notifications on new connection from:  %s", r.Central.ID())
 				})
 
-			dataCharacteristic := s.AddCharacteristic(dataCharUUID)
+			dataCharacteristic := gatt.NewCharacteristic(dataCharUUID, s, 0x16, 0x0010, 0x0011)
+			s.AddCharacteristic(dataCharacteristic.UUID())
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
 					b.dataNotifierMtx.Lock()
@@ -172,7 +174,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				})
 
 			h := gatt.NewService(service2UUID)
-			hbCharacteristic := gatt.NewCharacteristic(heartbeatCharUUID, h, 0, 0x00, 0x00)
+			hbCharacteristic := gatt.NewCharacteristic(heartbeatCharUUID, h, 0x22, 0x0014, 0x0015)
 			h.AddCharacteristic(hbCharacteristic.UUID())
 			hbCharacteristic.HandleReadFunc(
 				func(rsp gatt.ResponseWriter, req *gatt.ReadRequest) {
