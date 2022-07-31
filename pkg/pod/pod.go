@@ -43,9 +43,9 @@ func New(ble *bluetooth.Ble, stateFile string, freshState bool) *Pod {
 	var err error
 
 	state := &PODState{
-		Reservoir:           150 / 0.05,
-		ActivationTime:      time.Now(),
-		Filename:            stateFile,
+		Reservoir:      150 / 0.05,
+		ActivationTime: time.Now(),
+		Filename:       stateFile,
 	}
 	if !freshState {
 		state, err = NewState(stateFile)
@@ -97,6 +97,16 @@ func (p *Pod) StartAcceptingCommands() {
 	if p.state.LTK != nil { // paired, just establish new session
 		p.EapAka()
 	} else {
+		var uniqueId = firstCmd[3:6]
+		log.Tracef("SET_UNIQUE_ID uniqueId %@", uniqueId)
+
+		p.mtx.Lock()
+		p.state.Id = uniqueId
+		p.state.Save()
+		p.mtx.Unlock()
+
+		p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
+
 		p.StartActivation() // not paired, get the LTK
 	}
 }
@@ -275,15 +285,6 @@ func (p *Pod) CommandLoop(pMsg PodMsgBody) {
 			rsp = p.getResponse(cmd)
 		}
 
-		if cmd.GetType() == command.SET_UNIQUE_ID {
-			// Set the unique ID
-			log.Tracef("SET_UNIQUE_ID cmd.GetPayload() %@", cmd.GetPayload())
-			uniqueId := cmd.GetPayload()
-			log.Tracef("SET_UNIQUE_ID uniqueId %@", uniqueId)
-			p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
-			p.state.Id = uniqueId
-		}
-
 		p.state.MsgSeq++
 		p.state.CmdSeq++
 		p.state.Save()
@@ -427,7 +428,6 @@ func (p *Pod) handleCommand(cmd command.Command) {
 			p.state.BolusEnd = time.Now().Add(time.Duration(c.Pulses) * time.Second * 2)
 		}
 
-
 		if crashAfterProcessingCommand {
 			p.state.LastProgSeqNum = cmd.GetSeq() // Normally this happens below, but we do it here in this special case
 			p.state.Save()
@@ -437,7 +437,7 @@ func (p *Pod) handleCommand(cmd command.Command) {
 	case *command.GetStatus:
 		if p.state.PodProgress == response.PodProgressInsertingCannula {
 			p.state.PodProgress = response.PodProgressRunningAbove50U
-    }
+		}
 	case *command.StopDelivery:
 		if c.StopBolus {
 			p.state.BolusEnd = time.Time{}
@@ -484,7 +484,7 @@ func (p *Pod) SetFault(newVal uint8) {
 
 func (p *Pod) SetActiveTime(newVal int) {
 	p.mtx.Lock()
-	p.state.ActivationTime = time.Now().Add(- time.Duration(newVal) * time.Minute)
+	p.state.ActivationTime = time.Now().Add(-time.Duration(newVal) * time.Minute)
 	p.state.Save()
 	p.mtx.Unlock()
 }

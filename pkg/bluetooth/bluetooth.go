@@ -134,8 +134,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 
 			s := gatt.NewService(serviceUUID)
 
-			cmdCharacteristic := gatt.NewCharacteristic(cmdCharUUID, s, 0x2E, 0x000d, 0x000e)
-			s.AddCharacteristic(cmdCharacteristic.UUID())
+			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
 					log.Tracef("received CMD,  %x", data)
@@ -153,8 +152,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 					log.Infof("pkg bluetooth; handling CMD notifications on new connection from:  %s", r.Central.ID())
 				})
 
-			dataCharacteristic := gatt.NewCharacteristic(dataCharUUID, s, 0x16, 0x0010, 0x0011)
-			s.AddCharacteristic(dataCharacteristic.UUID())
+			dataCharacteristic := s.AddCharacteristic(dataCharUUID)
 			dataCharacteristic.HandleNotifyFunc(
 				func(r gatt.Request, n gatt.Notifier) {
 					b.dataNotifierMtx.Lock()
@@ -174,12 +172,15 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 				})
 
 			h := gatt.NewService(service2UUID)
-			hbCharacteristic := gatt.NewCharacteristic(heartbeatCharUUID, h, 0x22, 0x0014, 0x0015)
-			h.AddCharacteristic(hbCharacteristic.UUID())
+			hbCharacteristic := s.AddCharacteristic(heartbeatCharUUID)
 			hbCharacteristic.HandleReadFunc(
 				func(rsp gatt.ResponseWriter, req *gatt.ReadRequest) {
-
-				})
+					for range time.Tick(time.Second * 10) {
+						rsp.Write([]byte{0x00})
+						log.Tracef("pkg bluetooth; heartbeat sent")
+					}
+				},
+			)
 
 			err = d.SetServices([]*gatt.Service{s, h})
 			if err != nil {
@@ -197,7 +198,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 
 			// CE1F923D-C539-48EA-7300-0AFFFFFFFE00
 			// Advertise device name and service's UUIDs.
-			mfgData, err := hex.DecodeString("60030001000000")
+			mfgData, _ := hex.DecodeString("60030001000000")
 			err = d.AdvertiseNameServicesMfgData(
 				"AP "+strings.ToUpper(hex.EncodeToString(podIdArray))+" 0A95B6110002761B",
 				[]gatt.UUID{
@@ -223,11 +224,14 @@ func (b *Ble) RefreshAdvertisingWithSpecifiedId(id []byte) error { // 4 bytes, f
 	// Looking at the paypal/gatt source code, we don't need to call StopAdvertising,
 	// but just call AdvertiseNameAndServices and it should update
 
-	log.Tracef("podIdServiceOne", gatt.UUID16(binary.BigEndian.Uint16(id[0:2])))
-	log.Tracef("podIdServiceTwo", gatt.UUID16(binary.BigEndian.Uint16(id[2:4])))
-	err := (*b.device).AdvertiseNameAndServices("AP "+strings.ToUpper(hex.EncodeToString(id))+" 0A95B6110002761B", []gatt.UUID{
-		gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(id) + "00"),
-	})
+	mfgData, _ := hex.DecodeString("60030001000000")
+	err := (*b.device).AdvertiseNameServicesMfgData(
+		"AP "+strings.ToUpper(hex.EncodeToString(id))+" 0A95B6110002761B",
+		[]gatt.UUID{
+			gatt.MustParseUUID("CE1F923D-C539-48EA-7300-0A" + hex.EncodeToString(id) + "00"),
+		},
+		mfgData,
+	)
 	if err != nil {
 		log.Infof("pkg bluetooth; could not re-advertise: %s", err)
 	}
