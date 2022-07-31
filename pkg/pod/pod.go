@@ -89,31 +89,29 @@ func (p *Pod) notifyStateChange() {
 
 func (p *Pod) StartAcceptingCommands() {
 	log.Infof("pkg pod; Listening for commands")
-	firstCmd, _ := p.ble.ReadCmd()
-	log.Infof("pkg pod; got first command: as string: %s", firstCmd)
-
 	p.ble.StartMessageLoop()
 
 	if p.state.LTK != nil { // paired, just establish new session
 		p.EapAka()
 	} else {
-		var uniqueId = firstCmd[3:6]
-		log.Tracef("SET_UNIQUE_ID uniqueId %@", uniqueId)
-
-		p.mtx.Lock()
-		p.state.Id = uniqueId
-		p.state.Save()
-		p.mtx.Unlock()
-
-		p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
-
 		p.StartActivation() // not paired, get the LTK
 	}
 }
 
 func (p *Pod) StartActivation() {
+	log.Infof("pkg pod; starting activation.")
 
 	pair := &pair.Pair{}
+
+	firstCmd, _ := p.ble.ReadCmd()
+	log.Infof("pkg pod; got first command: as string: %s", firstCmd)
+
+	// Set the unique ID
+	uniqueId := firstCmd[3:7]
+	log.Tracef("SET_UNIQUE_ID uniqueId [ % X ]", uniqueId)
+	p.state.Id = uniqueId
+	p.ble.RefreshAdvertisingWithSpecifiedId(uniqueId)
+
 	msg, _ := p.ble.ReadMessage()
 	if err := pair.ParseSP1SP2(msg); err != nil {
 		log.Fatalf("pkg pod;  pkg pod; error parsing SP1SP2 %s", err)
@@ -168,6 +166,7 @@ func (p *Pod) StartActivation() {
 }
 
 func (p *Pod) EapAka() {
+	log.Infof("pkg pod; eap aka.")
 
 	session := eap.NewEapAkaChallenge(p.state.LTK, p.state.EapAkaSeq)
 
@@ -214,6 +213,7 @@ func (p *Pod) EapAka() {
 }
 
 func (p *Pod) CommandLoop(pMsg PodMsgBody) {
+	log.Infof("pkg pod; command loop.")
 	var lastMsgSeq uint8 = 0
 	var data []byte = make([]byte, 4)
 	var n int = 0
