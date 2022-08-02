@@ -137,7 +137,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 			cmdCharacteristic := s.AddCharacteristic(cmdCharUUID)
 			cmdCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("received CMD,  %x", data)
+					log.Tracef("pkg bluetooth; received CMD, %x -- %d", data, len(data))
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.cmdInput <- Packet(ret)
@@ -164,7 +164,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 
 			dataCharacteristic.HandleWriteFunc(
 				func(r gatt.Request, data []byte) (status byte) {
-					log.Tracef("pkg bluetooth; received DATA,%x, -- %d", data, len(data))
+					log.Tracef("pkg bluetooth; received DATA, %x -- %d", data, len(data))
 					ret := make([]byte, len(data))
 					copy(ret, data)
 					b.dataInput <- Packet(ret)
@@ -299,7 +299,13 @@ func (b *Ble) loop(stop chan bool) {
 		case <-stop:
 			return
 		case msg := <-b.messageOutput:
-			b.writeMessage(msg)
+			b.writeMessageData(msg)
+		case data := <-b.dataInput:
+			msg, err := b.readMessageData(data)
+			if err != nil {
+				log.Fatalf("pkg bluetooth; error reading message: %s", err)
+			}
+			b.messageInput <- msg
 		case cmd := <-b.cmdInput:
 			msg, err := b.readMessage(cmd)
 			if err != nil {
@@ -331,6 +337,31 @@ func (b *Ble) expectCommand(expected Packet) {
 	if !bytes.Equal(expected[:1], cmd[:1]) {
 		log.Fatalf("pkg bluetooth; expected command: %s. received command: %s", expected, cmd)
 	}
+}
+
+func (b *Ble) writeMessageData(msg *message.Message) {
+	var buf bytes.Buffer
+	var index byte = 0
+
+	bytes, err := msg.Marshal()
+	if err != nil {
+		log.Fatalf("pkg bluetooth; could not marshal the message %s", err)
+	}
+	log.Tracef("pkg bluetooth; Sending message: %x", bytes)
+
+	sum := crc32.ChecksumIEEE(bytes)
+
+	buf.WriteByte(index) // index
+	buf.WriteByte(0)     // fragments
+
+	buf.WriteByte(byte(sum >> 24))
+	buf.WriteByte(byte(sum >> 16))
+	buf.WriteByte(byte(sum >> 8))
+	buf.WriteByte(byte(sum))
+	buf.WriteByte((byte(len(bytes))))
+	buf.Write(bytes[:])
+	b.writeDataBuffer(&buf)
+	return
 }
 
 func (b *Ble) writeMessage(msg *message.Message) {
@@ -412,6 +443,39 @@ func (b *Ble) writeMessage(msg *message.Message) {
 		b.writeDataBuffer(&buf)
 	}
 	b.expectCommand(CmdSuccess)
+}
+
+func (b *Ble) readMessageData(data Packet) (*message.Message, error) {
+	var buf bytes.Buffer
+	var checksum []byte
+
+	// fragments := int(data[1])
+	checksum = data[2:6]
+	len := data[6]
+	end := len + 7
+	buf.Write(data[7:end])
+
+	bytes := buf.Bytes()
+	sum := crc32.ChecksumIEEE(bytes)
+	if binary.BigEndian.Uint32(checksum) != sum {
+		log.Warnf("pkg bluetooth; checksum missmatch. checksum is: %x. want: %x", sum, checksum)
+		log.Warnf("pkg bluetooth; data: %s", hex.EncodeToString(bytes))
+
+		b.WriteCmd(CmdFail)
+		return nil, errors.New("checksum missmatch")
+	}
+
+	msg, _err := message.Unmarshal(bytes)
+
+	if _err == nil {
+		b.WriteCmd(CmdSuccess)
+	} else {
+		b.WriteCmd(CmdFail)
+	}
+
+	log.Tracef("pkg bluetooth; Received message:", spew.Sdump(msg))
+
+	return msg, _err
 }
 
 func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
