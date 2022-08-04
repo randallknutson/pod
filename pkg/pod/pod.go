@@ -118,11 +118,23 @@ func (p *Pod) StartActivation() {
 	}
 	// read PDM public key and nonce
 	msg, _ = p.ble.ReadMessage()
+	if err := pair.ParseSPS0(msg); err != nil {
+		log.Fatalf("pkg pod; error parsing SPS0 %s", err)
+	}
+
+	msg, err := pair.GenerateSPS0()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// send POD public key and nonce
+	p.ble.WriteMessage(msg)
+
+	msg, _ = p.ble.ReadMessage()
 	if err := pair.ParseSPS1(msg); err != nil {
 		log.Fatalf("pkg pod; error parsing SPS1 %s", err)
 	}
 
-	msg, err := pair.GenerateSPS1()
+	msg, err = pair.GenerateSPS1()
 	if err != nil {
 		log.Fatal(err)
 	}

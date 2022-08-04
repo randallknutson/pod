@@ -2,6 +2,7 @@ package pair
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -18,6 +19,7 @@ const (
 	sp1 = "SP1="
 	sp2 = ",SP2="
 
+	sps0   = "SPS0="
 	sps1   = "SPS1="
 	sps2   = "SPS2="
 	sp0gp0 = "SP0,GP0"
@@ -33,6 +35,7 @@ type Pair struct {
 	pdmPublic []byte
 	pdmNonce  []byte
 	pdmConf   []byte
+	sps0      []byte
 
 	curve25519LTK []byte
 	pdmID         []byte
@@ -86,6 +89,26 @@ func (c *Pair) ParseSP1SP2(msg *message.Message) error {
 	return nil
 }
 
+func (c *Pair) ParseSPS0(msg *message.Message) error {
+	sp, err := parseStringByte([]string{sps0}, msg.Payload)
+	if err != nil {
+		log.Debugf("Message :%s", spew.Sdump(msg))
+		return err
+	}
+	pdmNonce := sp[sps0][1:]
+	c.pdmNonce = make([]byte, 16)
+	copy(c.pdmNonce, pdmNonce)
+
+	log.Infof("Received SPS0  %x", sp[sps0])
+	copy(c.pdmNonce, []byte(sps0))
+
+	err = c.computeMyData()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Pair) ParseSPS1(msg *message.Message) error {
 	sp, err := parseStringByte([]string{sps1}, msg.Payload)
 	if err != nil {
@@ -94,16 +117,9 @@ func (c *Pair) ParseSPS1(msg *message.Message) error {
 	}
 	log.Infof("Received SPS1  %x", sp[sps1])
 	pdmPublic := sp[sps1][:32]
-	pdmNonce := sp[sps1][32:]
 
 	c.pdmPublic = make([]byte, 32)
-	c.pdmNonce = make([]byte, 16)
-	copy(c.pdmNonce, pdmNonce)
 	copy(c.pdmPublic, pdmPublic)
-	err = c.computeMyData()
-	if err != nil {
-		return err
-	}
 	c.curve25519LTK, err = curve25519.X25519(c.podPrivate, c.pdmPublic)
 	if err != nil {
 		return err
@@ -111,12 +127,30 @@ func (c *Pair) ParseSPS1(msg *message.Message) error {
 	return nil
 }
 
+func (c *Pair) GenerateSPS0() (*message.Message, error) {
+	var err error
+	var buf bytes.Buffer
+
+	buf.WriteByte(0x00)
+	buf.Write(c.podNonce)
+
+	sp := make(map[string][]byte)
+	sp[sps0] = buf.Bytes()
+
+	msg := message.NewMessage(message.MessageTypePairing, c.podID, c.pdmID)
+	msg.Payload, err = buildStringByte([]string{sps0}, sp)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Static SPS0: %x", msg.Payload)
+	return msg, nil
+}
+
 func (c *Pair) GenerateSPS1() (*message.Message, error) {
 	var err error
 	var buf bytes.Buffer
 
 	buf.Write(c.podPublic)
-	buf.Write(c.podNonce)
 
 	sp := make(map[string][]byte)
 	sp[sps1] = buf.Bytes()
@@ -131,7 +165,6 @@ func (c *Pair) GenerateSPS1() (*message.Message, error) {
 		return nil, err
 	}
 	log.Debugf("Pod public %x :: %d", c.podPublic, len(c.podPublic))
-	log.Debugf("Pod nonce %x :: %d", c.podNonce, len(c.podNonce))
 	log.Debugf("Generated SPS1: %x", msg.Payload)
 	return msg, nil
 }
@@ -195,7 +228,8 @@ func (c *Pair) computeMyData() error {
 	var err error
 	c.podPrivate = make([]byte, 32)
 	c.podPublic = make([]byte, 32)
-	c.podNonce = make([]byte, 16) // 0 for now TODO
+	c.podNonce = make([]byte, 4)
+	c.podNonce, _ = hex.DecodeString("0109a218")
 	/*
 		if _, err := rand.Read(podPrivateKey); err != nil {
 			return nil, nil, nil, err
@@ -218,8 +252,8 @@ func (c *Pair) computePairData() error {
 	log.Debugf("Donna LTK: %x", c.curve25519LTK)
 	//first_key = data.pod_public[-4:] + data.pdm_public[-4:] + data.pod_nonce[-4:] + data.pdm_nonce[-4:]
 	firstKey := append(c.podPublic[28:], c.pdmPublic[28:]...)
-	firstKey = append(firstKey, c.podNonce[12:]...)
-	firstKey = append(firstKey, c.pdmNonce[12:]...)
+	firstKey = append(firstKey, c.podNonce[:]...)
+	firstKey = append(firstKey, c.pdmNonce[:]...)
 	log.Debugf("First key %x :: %d", firstKey, len(firstKey))
 
 	first, err := cmac.New(firstKey)
