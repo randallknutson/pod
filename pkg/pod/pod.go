@@ -122,6 +122,8 @@ func (p *Pod) StartActivation() {
 		log.Fatalf("pkg pod; error parsing SPS0 %s", err)
 	}
 
+	// 0000beb2c6071c5457102301000180fffffffe00004ca4535053303d00050000099129
+	// 00050000099129
 	msg, err := pair.GenerateSPS0()
 	if err != nil {
 		log.Fatal(err)

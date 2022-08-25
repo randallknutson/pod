@@ -132,6 +132,8 @@ func (c *Pair) GenerateSPS0() (*message.Message, error) {
 	var buf bytes.Buffer
 
 	buf.WriteByte(0x00)
+	buf.WriteByte(0x05)
+	buf.WriteByte(0x00)
 	buf.Write(c.podNonce)
 
 	sp := make(map[string][]byte)
