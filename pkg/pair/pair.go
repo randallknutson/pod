@@ -132,8 +132,6 @@ func (c *Pair) GenerateSPS0() (*message.Message, error) {
 	var buf bytes.Buffer
 
 	buf.WriteByte(0x00)
-	buf.WriteByte(0x05)
-	buf.WriteByte(0x00)
 	buf.Write(c.podNonce)
 
 	sp := make(map[string][]byte)
@@ -231,7 +229,7 @@ func (c *Pair) computeMyData() error {
 	c.podPrivate = make([]byte, 32)
 	c.podPublic = make([]byte, 32)
 	c.podNonce = make([]byte, 4)
-	c.podNonce, _ = hex.DecodeString("0109a218")
+	c.podNonce, _ = hex.DecodeString("00099129")
 	/*
 		if _, err := rand.Read(podPrivateKey); err != nil {
 			return nil, nil, nil, err
