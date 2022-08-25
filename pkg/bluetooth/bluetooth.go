@@ -311,7 +311,9 @@ func (b *Ble) loop(stop chan bool) {
 			if err != nil {
 				log.Fatalf("pkg bluetooth; error reading message: %s", err)
 			}
-			b.messageInput <- msg
+			if msg != nil {
+				b.messageInput <- msg
+			}
 		}
 	}
 }
@@ -481,6 +483,10 @@ func (b *Ble) readMessageData(data Packet) (*message.Message, error) {
 func (b *Ble) readMessage(cmd Packet) (*message.Message, error) {
 	var buf bytes.Buffer
 	var checksum []byte
+
+	if bytes.Equal(CmdSuccess[:1], cmd[:1]) {
+		return nil, nil
+	}
 
 	log.Trace("pkg bluetooth; Reading RTS")
 	if !bytes.Equal(CmdRTS[:1], cmd[:1]) {
