@@ -16,11 +16,11 @@ type PODState struct {
 
 	Id []byte `toml:"id"` // 4 byte
 
-	MsgSeq         uint8  `toml:"msg_seq"`   // TODO: is this the same as nonceSeq?
-	CmdSeq         uint8  `toml:"cmd_seq"`   // TODO: are all those 3 the same number ???
-	NonceSeq       uint64 `toml:"nonce_seq"` // or 16?
+	MsgSeq   uint8  `toml:"msg_seq"`   // TODO: is this the same as nonceSeq?
+	CmdSeq   uint8  `toml:"cmd_seq"`   // TODO: are all those 3 the same number ???
+	NonceSeq uint64 `toml:"nonce_seq"` // or 16?
 
-	LastProgSeqNum uint8  `toml:"last_prog_seq"`
+	LastProgSeqNum uint8 `toml:"last_prog_seq"`
 
 	NoncePrefix []byte `toml:"nonce_prefix"`
 	CK          []byte `toml:"ck"`
@@ -37,6 +37,7 @@ type PODState struct {
 	// At some point these could be replaced with details
 	// of each kind of delivery (volume, start time, schedule, etc)
 	BolusEnd            time.Time `toml:"bolus_end"`
+	BolusCanceledAt     time.Time `toml:"bolus_canceled_at"`
 	TempBasalEnd        time.Time `toml:"temp_basal_end"`
 	ExtendedBolusActive bool      `toml:"extended_bolus_active"`
 	BasalActive         bool      `toml:"basal_active"`
@@ -69,4 +70,13 @@ func (p *PODState) Save() error {
 
 func (p *PODState) MinutesActive() uint16 {
 	return uint16(time.Now().Sub(p.ActivationTime).Round(time.Minute).Minutes())
+}
+
+func (p *PODState) BolusRemaining() uint16 {
+	now := time.Now()
+	if p.BolusEnd.After(now) {
+		return uint16(p.BolusEnd.Sub(now).Seconds() / 2)
+	} else {
+		return 0
+	}
 }
