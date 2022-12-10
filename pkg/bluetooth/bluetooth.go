@@ -77,7 +77,7 @@ func New(adapterID string, podId []byte) (*Ble, error) {
 	d.Handle(
 		gatt.CentralConnected(func(c gatt.Central) {
 			fmt.Println("pkg bluetooth; ** New connection from: ", c.ID())
-			// b.StopMessageLoop()
+			b.StopMessageLoop()
 			b.central = &c
 		}),
 		gatt.CentralDisconnected(func(c gatt.Central) {
