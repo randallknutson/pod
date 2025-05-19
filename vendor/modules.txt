@@ -39,6 +39,8 @@ github.com/paypal/gatt/xpc
 # github.com/pelletier/go-toml v1.8.1
 ## explicit; go 1.12
 github.com/pelletier/go-toml
+# github.com/pion/dtls/v2 v2.2.11
+## explicit; go 1.13
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -50,15 +52,17 @@ github.com/pschlump/AesCCM
 # github.com/sirupsen/logrus v1.6.0
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/stretchr/testify v1.6.1
-## explicit; go 1.13
+# github.com/stretchr/testify v1.8.4
+## explicit; go 1.20
 # github.com/wmnsk/milenage v1.0.4
 ## explicit; go 1.15
 github.com/wmnsk/milenage
-# golang.org/x/crypto v0.22.0
+# golang.org/x/crypto v0.23.0
 ## explicit; go 1.18
-golang.org/x/crypto/curve25519
-golang.org/x/crypto/curve25519/internal/field
-# golang.org/x/sys v0.19.0
+golang.org/x/crypto/blowfish
+# golang.org/x/sys v0.20.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
+# hg.sr.ht/~dchapes/ccm v1.0.1
+## explicit; go 1.13
+hg.sr.ht/~dchapes/ccm

@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func main() {
+func main1() {
 	var stateFile = flag.String("state", "state.toml", "pod state")
 	var freshState = flag.Bool("fresh", false, "start fresh. not activated, empty state")
 	// if both verbose and quiet are chosen, e.g., -v -q, the verbose dominates

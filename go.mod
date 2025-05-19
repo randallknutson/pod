@@ -12,7 +12,7 @@ require (
 	github.com/pschlump/AesCCM v0.0.0-20160925022350-c5df73b5834e
 	github.com/sirupsen/logrus v1.6.0
 	github.com/wmnsk/milenage v1.0.4
-	golang.org/x/crypto v0.22.0
+	golang.org/x/crypto v0.23.0
 )
 
 require (
@@ -21,8 +21,10 @@ require (
 	github.com/jacobsa/ogletest v0.0.0-20170503003838-80d50a735a11 // indirect
 	github.com/jacobsa/reqtrace v0.0.0-20150505043853-245c9e0234cb // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/pion/dtls/v2 v2.2.11 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pschlump/godebug v1.0.1 // indirect
-	github.com/stretchr/testify v1.6.1 // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	hg.sr.ht/~dchapes/ccm v1.0.1 // indirect
 )
